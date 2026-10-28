@@ -193,7 +193,7 @@ function drawBoard(){
  const zones=[["red",0,0],["green",9,0],["blue",0,9],["yellow",9,9]];
  zones.forEach(([c,x,y])=>{s+='<rect x="'+(x*40)+'" y="'+(y*40)+'" width="240" height="240" fill="'+COLORS[c]+'" opacity=".96"/>';s+='<rect x="'+(x*40+22)+'" y="'+(y*40+22)+'" width="196" height="196" rx="8" fill="'+SOFT[c]+'" stroke="#ffffff" stroke-width="2"/>';});
  // Outer route cells.
- PATH.forEach((p,i)=>{let c=SOFT.red;if(i===0)c=COLORS.red;else if(i===13)c=COLORS.green;else if(i===26)c=COLORS.yellow;else if(i===39)c=COLORS.blue;else c="#f8fafc";s+=cell(p[0],p[1],c,i%13===0?"#ffffff":"#cbd4df");if(SAFE.has(i)){s+='<polygon points="'+starPoints(p[0]*40+20,p[1]*40+20,9,4.2,5)+'" fill="'+(i===0? "#fff": "#738293")+'" opacity=".95"/>';if([0,13,26,39].includes(i))s+='<circle cx="'+(p[0]*40+20)+'" cy="'+(p[1]*40+20)+'" r="14" fill="'+COLORS[({0:"red",13:"green",26:"yellow",39:"blue"})[i]]+'" stroke="#fff" stroke-width="2"/>';}}
+ PATH.forEach((p,i)=>{let c=SOFT.red;if(i===0)c=COLORS.red;else if(i===13)c=COLORS.green;else if(i===26)c=COLORS.yellow;else if(i===39)c=COLORS.blue;else c="#f8fafc";s+=cell(p[0],p[1],c,i%13===0?"#ffffff":"#cbd4df");if(SAFE.has(i)){s+='<polygon points="'+starPoints(p[0]*40+20,p[1]*40+20,9,4.2,5)+'" fill="'+(i===0? "#fff": "#738293")+'" opacity=".95"/>';if([0,13,26,39].includes(i))s+='<circle cx="'+(p[0]*40+20)+'" cy="'+(p[1]*40+20)+'" r="14" fill="'+COLORS[({0:"red",13:"green",26:"yellow",39:"blue"})[i]]+'" stroke="#fff" stroke-width="2"/>';}});
  // Home lanes.
  Object.keys(LANES).forEach(c=>LANES[c].forEach(p=>{s+=cell(p[0],p[1],COLORS[c],"#ffffff");}));
  // Central four-color finish.
