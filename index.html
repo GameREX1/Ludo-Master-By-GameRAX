@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#05070b">
+<meta name="description" content="Play Ludo Master by GameRAX — a free browser Ludo game against a smart robot opponent.">
+<link rel="icon" type="image/png" href="https://cdn.corenexis.com/f/i2qQMduvFbC.png">
+<title>Ludo Master by GameRAX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#05070b;--panel:#0b1018;--panel2:#101722;--line:#222d3b;--cyan:#00d9ff;--muted:#8b99aa;--red:#ff5267;--green:#15d99a;--yellow:#ffd34e;--blue:#57a5ff}
+*{box-sizing:border-box}
+html{min-width:320px;background:var(--bg);scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(ellipse at 50% -10%,#10212c 0,transparent 44%),var(--bg);color:#f4f7fb;font-family:Inter,system-ui,Arial,sans-serif;min-height:100vh}
+button{font:inherit}
+a{color:inherit;text-decoration:none}
+button:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.topbar{height:76px;border-bottom:1px solid #1c2734;background:rgba(5,7,11,.88);backdrop-filter:blur(16px);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(14px,4vw,48px);gap:15px;position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand img{width:43px;height:43px;object-fit:contain;border-radius:12px;background:#080d13;border:1px solid #273543;padding:3px}
+.brand-name{font-weight:900;letter-spacing:-.5px;font-size:18px;white-space:nowrap}
+.brand-name span{color:var(--cyan)}
+.brand-sub{font-size:10px;color:#8290a1;letter-spacing:2px;font-weight:800;margin-top:3px}
+.topright{display:flex;align-items:center;gap:10px}
+.pill{border:1px solid #243140;background:#0d141d;padding:8px 12px;border-radius:999px;color:#b9c4d0;font-size:12px;font-weight:700;white-space:nowrap}
+.pill .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#27d98c;margin-right:7px;box-shadow:0 0 12px #27d98c}
+.link-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#00d9ff,#58e6ff);border:0;border-radius:10px;padding:11px 15px;color:#031016;font-size:12px;font-weight:900;box-shadow:0 5px 20px #00d9ff1a;transition:transform .2s,filter .2s}
+.link-btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+main{max-width:1500px;margin:0 auto;padding:28px clamp(12px,3vw,38px) 32px}
+.hero{display:flex;align-items:flex-end;justify-content:space-between;gap:20px;margin:10px 0 22px}
+.kicker{color:var(--cyan);font-size:11px;font-weight:900;letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
+h1{font-size:clamp(29px,4vw,48px);letter-spacing:-2px;line-height:1.05;margin:0;font-weight:900}
+h1 .highlight{background:linear-gradient(100deg,#fff 0%,#00d9ff 60%,#83f0ff 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);font-size:13px;line-height:1.7;margin:11px 0 0;max-width:610px}
+.hero-badge{flex-shrink:0;display:flex;align-items:center;gap:10px;border:1px solid #243445;background:linear-gradient(120deg,#101b27,#0b1018);padding:12px 15px;border-radius:14px}
+.hero-badge .robot{font-size:27px}
+.hero-badge b{display:block;font-size:12px}
+.hero-badge small{display:block;font-size:10px;color:#90a0af;margin-top:3px}
+.layout{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.65fr);gap:18px;align-items:start}
+.card{border:1px solid var(--line);background:linear-gradient(145deg,rgba(16,23,34,.97),rgba(8,12,18,.97));border-radius:20px;box-shadow:0 18px 60px #0003;overflow:hidden}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:17px 20px;border-bottom:1px solid #202b38}
+.card-title{font-weight:900;font-size:14px;letter-spacing:.1px}
+.card-sub{font-size:10px;color:var(--muted);margin-top:4px}
+.board-label{font-size:10px;font-weight:900;color:#7f91a3;letter-spacing:1.3px;border:1px solid #2a3746;border-radius:7px;padding:6px 8px}
+.board-wrap{padding:clamp(10px,2.6vw,25px);display:flex;justify-content:center;align-items:center;position:relative;background:radial-gradient(ellipse at center,#10202b66,transparent 65%)}
+#board{display:block;width:100%;max-width:670px;height:auto;aspect-ratio:1;border-radius:9px;filter:drop-shadow(0 12px 25px #0008);touch-action:manipulation}
+#board .token{cursor:pointer;transition:opacity .2s}
+#board .token:focus{outline:none}
+#board .token.clickable{cursor:pointer}
+.board-footer{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:0 20px 18px;color:#8998a8;font-size:10px}
+.legend{display:flex;gap:12px;flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:7px;height:7px;border-radius:50%}
+#hint{font-weight:700;color:#d1dce6;text-align:right}
+.rightcol{display:flex;flex-direction:column;gap:16px}
+.players{padding:16px}
+.player{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #243140;background:#0a1018;border-radius:14px;transition:border-color .2s,box-shadow .2s}
+.player+.player{margin-top:10px}
+.player.active{border-color:var(--cyan);box-shadow:0 0 0 1px #00d9ff22,0 0 24px #00d9ff0b}
+.avatar{width:48px;height:48px;display:grid;place-items:center;border-radius:13px;font-size:26px;background:#161f2b;flex-shrink:0}
+.avatar.red{background:#ff52671a;border:1px solid #ff526744}
+.avatar.yellow{background:#ffd34e1a;border:1px solid #ffd34e44}
+.playerinfo{min-width:0;flex:1}
+.playername{font-weight:900;font-size:13px;display:flex;align-items:center;gap:7px}
+.playerlabel{font-size:9px;font-weight:900;border-radius:5px;padding:4px 5px;background:#17212d;color:#9eacbb;letter-spacing:.5px}
+.playerdesc{font-size:10px;color:#91a0b0;margin-top:5px}
+.token-count{font-size:11px;font-weight:900;text-align:right;white-space:nowrap}
+.token-count small{display:block;color:#8494a4;font-weight:600;margin-top:4px;font-size:9px}
+.status-live{display:flex;gap:6px;align-items:center;color:#4ce0a1;font-size:10px;font-weight:800}
+.status-live:before{content:'';width:6px;height:6px;border-radius:50%;background:#4ce0a1;box-shadow:0 0 10px #4ce0a1}
+.dice-card{padding:18px}
+.dice-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dice-title{font-size:14px;font-weight:900}
+.dice-round{color:#8292a3;font-size:10px}
+.dice-center{display:flex;align-items:center;gap:17px;padding:18px 0}
+.dice-face{width:82px;height:82px;border-radius:18px;background:linear-gradient(145deg,#fff,#dfe8ef);color:#111a25;display:grid;place-items:center;font-size:44px;font-weight:900;box-shadow:0 8px 24px #0006,inset 0 -3px 0 #aebcc8;flex-shrink:0;transition:transform .2s}
+.dice-face.rolling{animation:roll .45s ease-in-out}
+@keyframes roll{0%{transform:rotate(0) scale(1)}45%{transform:rotate(17deg) scale(1.08)}100%{transform:rotate(0) scale(1)}}
+.dice-instruction{font-size:12px;font-weight:800;line-height:1.5}
+.dice-help{font-size:10px;line-height:1.6;color:#8e9cac;margin-top:5px}
+.primary-btn,.secondary-btn{width:100%;min-height:47px;border-radius:11px;font-size:12px;font-weight:900;cursor:pointer;transition:transform .18s,filter .18s,background .18s}
+.primary-btn{border:0;color:#041119;background:linear-gradient(110deg,#00d9ff,#67eaff);box-shadow:0 8px 25px #00d9ff16}
+.primary-btn:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.08)}
+.primary-btn:disabled{cursor:not-allowed;opacity:.4;filter:grayscale(.45)}
+.secondary-btn{margin-top:9px;border:1px solid #2d3948;color:#cbd5df;background:#131b26}
+.secondary-btn:hover{border-color:#00d9ff;color:#fff;background:#15212c}
+.action-row{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.action-row .secondary-btn{margin:0}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #202b38;margin-top:15px;padding-top:14px;font-size:11px;color:#a3afbc}
+.switch{border:1px solid #334253;border-radius:999px;background:#17222e;color:#d2dce7;padding:6px 9px;font-size:10px;font-weight:800;cursor:pointer}
+.switch.on{color:#091118;background:#00d9ff;border-color:#00d9ff}
+.log-card{padding:17px 18px}
+.log-head{display:flex;justify-content:space-between;align-items:center}
+.log-head h2{font-size:13px;margin:0;font-weight:900}
+.log-head span{font-size:10px;color:#8797a8}
+#moveLog{display:flex;flex-direction:column;gap:8px;margin-top:13px;max-height:165px;overflow:auto}
+.log-item{display:flex;gap:9px;align-items:flex-start;font-size:10px;line-height:1.5;color:#a7b4c2}
+.log-icon{width:23px;height:23px;display:grid;place-items:center;background:#18212c;border-radius:7px;flex-shrink:0}
+.log-item b{color:#e5ebf2}
+.rules{margin-top:18px;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.rule{padding:14px;border:1px solid #202c39;background:#0a1018;border-radius:13px}
+.rule-icon{font-size:20px}
+.rule b{display:block;font-size:11px;margin:8px 0 5px}
+.rule p{font-size:10px;line-height:1.6;color:#92a0af;margin:0}
+footer{border-top:1px solid #1e2935;padding:23px 15px 30px;text-align:center;color:#788897;font-size:10px;line-height:1.8}
+footer img{width:19px;height:19px;object-fit:contain;vertical-align:middle;margin-right:5px}
+footer a{color:var(--cyan);font-weight:900}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);background:#142230;border:1px solid #2f4859;color:white;padding:12px 17px;border-radius:12px;box-shadow:0 15px 40px #0008;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:30;font-size:12px;font-weight:700;max-width:calc(100vw - 30px);text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.winner-overlay{position:fixed;inset:0;background:#02050bd9;backdrop-filter:blur(10px);display:none;place-items:center;padding:20px;z-index:25}
+.winner-overlay.show{display:grid}
+.winner-box{max-width:390px;width:100%;padding:32px 25px;text-align:center;border-radius:22px;border:1px solid #2a3c4b;background:linear-gradient(145deg,#14202c,#080d14);box-shadow:0 20px 80px #0009}
+.winner-emoji{font-size:54px}
+.winner-box h2{font-size:25px;letter-spacing:-.7px;margin:14px 0 8px}
+.winner-box p{font-size:12px;line-height:1.7;color:#a0afbd;margin:0 0 22px}
+@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr) 310px}.hero{align-items:flex-start}.hero-badge{display:none}}
+@media(max-width:760px){.topbar{height:66px}.topright .pill{display:none}main{padding-top:20px}.layout{grid-template-columns:1fr}.rightcol{display:grid;grid-template-columns:1fr}.board-wrap{padding:10px}.card-head{padding:14px}.board-footer{padding:0 13px 14px;align-items:flex-start;flex-direction:column}#hint{text-align:left}.rules{grid-template-columns:1fr 1fr}.rules .rule:last-child{grid-column:1/-1}.hero{margin-top:4px}.hero p{font-size:12px}.brand img{width:37px;height:37px}.brand-name{font-size:15px}}
+@media(max-width:420px){.brand-sub{font-size:8px;letter-spacing:1.3px}.brand-name{font-size:13px}.topbar{padding:0 10px}.link-btn{padding:10px;font-size:10px}.rules{grid-template-columns:1fr}.rules .rule:last-child{grid-column:auto}.dice-face{width:70px;height:70px;font-size:38px}.hero h1{letter-spacing:-1.3px}.player{padding:10px}.token-count{font-size:10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="https://gamerax.online/" target="_blank" rel="noopener noreferrer" aria-label="Visit GameRAX">
+    <img src="https://cdn.corenexis.com/f/i2qQMduvFbC.png" alt="GameRAX logo" onerror="this.style.display='none'">
+    <div><div class="brand-name">LUDO MASTER <span>by GameRAX</span></div><div class="brand-sub">ROLL. MOVE. WIN.</div></div>
+  </a>
+  <div class="topright"><span class="pill"><i class="dot"></i>FREE BROWSER GAME</span><a class="link-btn" href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">🎮 VISIT GAMERAX ↗</a></div>
+</header>
+<main>
+  <section class="hero">
+    <div><div class="kicker">◆ GameRAX Originals</div><h1>One board.<br><span class="highlight">One smart rival.</span></h1><p>Roll the dice, bring your tokens home and outsmart Nexus — your robot opponent. A free Ludo match that runs right in your browser.</p></div>
+    <div class="hero-badge"><span class="robot">🤖</span><div><b>NEXUS AI ONLINE</b><small>Smart move selection enabled</small></div></div>
+  </section>
+  <div class="layout">
+    <section class="card">
+      <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><span class="board-label">2 PLAYERS</span></div>
+      <div class="board-wrap"><svg id="board" viewBox="0 0 600 600" role="img" aria-label="Interactive Ludo board"></svg></div>
+      <div class="board-footer"><div class="legend"><span><i style="background:var(--red)"></i>You · Red</span><span><i style="background:var(--yellow)"></i>Nexus · Yellow</span><span><i style="background:var(--green)"></i>Green lane</span><span><i style="background:var(--blue)"></i>Blue lane</span></div><div id="hint" aria-live="polite">Your turn — roll the dice.</div></div>
+    </section>
+    <aside class="rightcol">
+      <section class="card">
+        <div class="card-head"><div><div class="card-title">PLAYERS</div><div class="card-sub">First to get all 4 tokens home wins</div></div><span class="status-live">LIVE MATCH</span></div>
+        <div class="players">
+          <div class="player active" id="player-red"><div class="avatar red">🧑‍🚀</div><div class="playerinfo"><div class="playername">YOU <span class="playerlabel">HUMAN</span></div><div class="playerdesc">Red squad · Player 1</div></div><div class="token-count" id="red-count">0 / 4<small>home tokens</small></div></div>
+          <div class="player" id="player-yellow"><div class="avatar yellow">🤖</div><div class="playerinfo"><div class="playername">NEXUS <span class="playerlabel">ROBOT AI</span></div><div class="playerdesc">Yellow squad · Player 2</div></div><div class="token-count" id="yellow-count">0 / 4<small>home tokens</small></div></div>
+        </div>
+      </section>
+      <section class="card dice-card">
+        <div class="dice-top"><div class="dice-title">🎲 Dice control</div><span class="dice-round" id="turn-number">TURN 01</span></div>
+        <div class="dice-center"><div class="dice-face" id="diceFace" aria-label="Dice not rolled">—</div><div><div class="dice-instruction" id="diceInstruction">Ready to roll?</div><div class="dice-help" id="diceHelp">Roll a 6 to launch a token from base. A 6 earns another turn.</div></div></div>
+        <button id="rollBtn" class="primary-btn">🎲 ROLL DICE</button>
+        <div class="action-row"><button id="newBtn" class="secondary-btn">↻ New game</button><button id="soundBtn" class="secondary-btn">🔊 Sound: on</button></div>
+        <div class="settings-row"><span>Robot difficulty</span><button class="switch on" id="difficultyBtn" aria-pressed="true">SMART</button></div>
+      </section>
+      <section class="card log-card"><div class="log-head"><h2>RECENT MOVES</h2><span id="moveCount">0 moves</span></div><div id="moveLog"><div class="log-item"><div class="log-icon">🎲</div><div>Match ready. <b>Roll to start.</b></div></div></div></section>
+    </aside>
+  </div>
+  <section class="rules">
+    <div class="rule"><div class="rule-icon">🎯</div><b>Roll a six to start</b><p>Tokens leave base only with a 6. Any legal token can be chosen when more than one move is available.</p></div>
+    <div class="rule"><div class="rule-icon">🛡️</div><b>Safe squares & captures</b><p>Starred squares are safe. Land on an unprotected rival token to send it back to base.</p></div>
+    <div class="rule"><div class="rule-icon">🏁</div><b>Exact roll to finish</b><p>Move through your colored home lane. Get all four tokens to the center to win the match.</p></div>
+  </section>
+</main>
+<footer><img src="https://cdn.corenexis.com/f/i2qQMduvFbC.png" alt="GameRAX">A free game made for the <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">GameRAX</a> universe · <span id="year"></span> · Play more games at <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">gamerax.online</a></footer>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="winner-overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-labelledby="winnerTitle"><div class="winner-box"><div class="winner-emoji" id="winnerEmoji">🏆</div><h2 id="winnerTitle">You won!</h2><p id="winnerText">Great match!</p><button class="primary-btn" id="playAgainBtn">PLAY AGAIN</button><div style="margin-top:12px"><a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#00d9ff;font-weight:800">Explore more games on GameRAX ↗</a></div></div></div>
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const COLORS={red:"#ff5267",green:"#15d99a",yellow:"#ffd34e",blue:"#57a5ff"};
+const SOFT={red:"#ffdce1",green:"#d0ffed",yellow:"#fff4c8",blue:"#dcecff"};
+const START={red:0,green:13,yellow:26,blue:39};
+const PATH=[[1,6],[2,6],[3,6],[4,6],[5,6],[6,5],[6,4],[6,3],[6,2],[6,1],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[9,6],[10,6],[11,6],[12,6],[13,6],[14,6],[14,7],[14,8],[13,8],[12,8],[11,8],[10,8],[9,8],[8,9],[8,10],[8,11],[8,12],[8,13],[8,14],[7,14],[6,14],[6,13],[6,12],[6,11],[6,10],[6,9],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8],[0,7],[0,6]];
+const LANES={red:[[1,7],[2,7],[3,7],[4,7],[5,7]],green:[[7,1],[7,2],[7,3],[7,4],[7,5]],yellow:[[13,7],[12,7],[11,7],[10,7],[9,7]],blue:[[7,13],[7,12],[7,11],[7,10],[7,9]]};
+const SAFE=new Set([0,8,13,21,26,34,39,47]);
+const BASES={red:[[1.7,1.7],[4.3,1.7],[1.7,4.3],[4.3,4.3]],green:[[10.7,1.7],[13.3,1.7],[10.7,4.3],[13.3,4.3]],yellow:[[10.7,10.7],[13.3,10.7],[10.7,13.3],[13.3,13.3]],blue:[[1.7,10.7],[4.3,10.7],[1.7,13.3],[4.3,13.3]]};
+let teams,turn=0,die=null,legal=[],busy=false,gameOver=false,smart=true,soundOn=true,turns=0,totalMoves=0,toastTimer,logItems=[];
+const svg=$("board");
+function makeTeams(){return [{id:"red",name:"You",start:0,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))},{id:"yellow",name:"Nexus",start:26,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}];}
+function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function cell(x,y,fill,stroke="#cbd3dc",extra=""){return '<rect x="'+(x*40+2)+'" y="'+(y*40+2)+'" width="36" height="36" rx="3" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.4" '+extra+'/>';}
+function polygon(points,fill,stroke="none"){return '<polygon points="'+points.map(p=>(p[0]*40)+','+(p[1]*40)).join(" ")+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.4"/>';}
+function circle(cx,cy,r,fill,stroke="#ffffff",sw=2,extra=""){return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="'+sw+'" '+extra+'/>';}
+function starPoints(cx,cy,outer,inner,n){let pts=[];for(let i=0;i<n*2;i++){let a=-Math.PI/2+i*Math.PI/n;let r=i%2?inner:outer;pts.push((cx+Math.cos(a)*r).toFixed(1)+","+(cy+Math.sin(a)*r).toFixed(1));}return pts.join(" ");}
+function drawBoard(){
+ let s='<defs><filter id="tokenGlow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="3.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><linearGradient id="boardBg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f9fbff"/><stop offset="1" stop-color="#dce3ec"/></linearGradient></defs>';
+ s+='<rect x="0" y="0" width="600" height="600" rx="5" fill="#d9e0e9"/>';
+ const zones=[["red",0,0],["green",9,0],["blue",0,9],["yellow",9,9]];
+ zones.forEach(([c,x,y])=>{s+='<rect x="'+(x*40)+'" y="'+(y*40)+'" width="240" height="240" fill="'+COLORS[c]+'" opacity=".96"/>';s+='<rect x="'+(x*40+22)+'" y="'+(y*40+22)+'" width="196" height="196" rx="8" fill="'+SOFT[c]+'" stroke="#ffffff" stroke-width="2"/>';});
+ // Outer route cells.
+ PATH.forEach((p,i)=>{let c=SOFT.red;if(i===0)c=COLORS.red;else if(i===13)c=COLORS.green;else if(i===26)c=COLORS.yellow;else if(i===39)c=COLORS.blue;else c="#f8fafc";s+=cell(p[0],p[1],c,i%13===0?"#ffffff":"#cbd4df");if(SAFE.has(i)){s+='<polygon points="'+starPoints(p[0]*40+20,p[1]*40+20,9,4.2,5)+'" fill="'+(i===0? "#fff": "#738293")+'" opacity=".95"/>';if([0,13,26,39].includes(i))s+='<circle cx="'+(p[0]*40+20)+'" cy="'+(p[1]*40+20)+'" r="14" fill="'+COLORS[({0:"red",13:"green",26:"yellow",39:"blue"})[i]]+'" stroke="#fff" stroke-width="2"/>';}}
+ // Home lanes.
+ Object.keys(LANES).forEach(c=>LANES[c].forEach(p=>{s+=cell(p[0],p[1],COLORS[c],"#ffffff");}));
+ // Central four-color finish.
+ s+=polygon([[6,6],[9,6],[7.5,7.5]],COLORS.red);
+ s+=polygon([[9,6],[9,9],[7.5,7.5]],COLORS.green);
+ s+=polygon([[9,9],[6,9],[7.5,7.5]],COLORS.yellow);
+ s+=polygon([[6,9],[6,6],[7.5,7.5]],COLORS.blue);
+ s+='<circle cx="300" cy="300" r="18" fill="#0a111a" stroke="#ffffff" stroke-width="2"/><text x="300" y="304" text-anchor="middle" font-size="10" font-weight="900" fill="#ffffff">HOME</text>';
+ // Subtle labels in home bases.
+ s+='<text x="120" y="119" text-anchor="middle" font-size="17" font-weight="900" fill="#d82f48" opacity=".42">YOU</text>';
+ s+='<text x="480" y="119" text-anchor="middle" font-size="17" font-weight="900" fill="#b28700" opacity=".65">NEXUS AI</text>';
+ s+='<text x="120" y="479" text-anchor="middle" font-size="13" font-weight="900" fill="#3478c9" opacity=".6">BLUE LANE</text>';
+ s+='<text x="480" y="479" text-anchor="middle" font-size="13" font-weight="900" fill="#168a65" opacity=".6">GREEN LANE</text>';
+ // Base circles are drawn before movable pieces.
+ for(const c of ["red","green","yellow","blue"]){
+   BASES[c].forEach(pos=>{let cx=pos[0]*40,cy=pos[1]*40;s+=circle(cx,cy,16,"#ffffff",COLORS[c],3);s+=circle(cx,cy,10,SOFT[c],"#ffffff",1);});
+ }
+ // Make the active players' base cells more legible.
+ for(const c of ["red","yellow"]){
+   BASES[c].forEach((pos,i)=>{let tok=teams.find(t=>t.id===c).tokens[i];if(tok.progress===-1)return;});
+ }
+ s+='<rect x="0.8" y="0.8" width="598.4" height="598.4" rx="5" fill="none" stroke="#9aa9b8" stroke-width="1.5"/>';
+ // Draw active tokens. Occupied pieces get a small offset so every piece can be clicked.
+ const groups=new Map();
+ teams.forEach(t=>t.tokens.forEach(tok=>{let pos=tokenPos(t,tok);let key=pos[0].toFixed(2)+","+pos[1].toFixed(2);if(!groups.has(key))groups.set(key,[]);groups.get(key).push({t,tok,pos});}));
+ const offsets=[[0,0],[-8,-8],[8,-8],[-8,8],[8,8],[0,-10],[0,10]];
+ teams.forEach(t=>t.tokens.forEach(tok=>{
+   const pos=tokenPos(t,tok),key=pos[0].toFixed(2)+","+pos[1].toFixed(2),arr=groups.get(key)||[],idx=arr.findIndex(z=>z.t.id===t.id&&z.tok.id===tok.id),off=arr.length>1?(offsets[idx%offsets.length]||[0,0]):[0,0],cx=pos[0]*40+20+off[0],cy=pos[1]*40+20+off[1];
+   const isLegal=turn===0&&legal.includes(tok.id)&&!busy&&!gameOver;
+   const isSelected=selectedToken===tok.id;
+   let stroke=isLegal?"#ffffff":"#17202a",sw=isLegal?3:2;
+   s+='<g class="token '+(isLegal?"clickable":"")+'" data-team="'+t.id+'" data-token="'+tok.id+'" tabindex="'+(isLegal?0:-1)+'" role="button" aria-label="'+t.name+' token '+(tok.id+1)+(isLegal?", legal move":"")+'" opacity="'+(isLegal?1:0.96)+'">';
+   if(isLegal)s+=circle(cx,cy,18,"none","#ffffff",2.5,'stroke-dasharray="3 3" filter="url(#tokenGlow)"');
+   s+=circle(cx,cy,14,COLORS[t.id],stroke,sw,'filter="url(#tokenGlow)"');
+   s+=circle(cx-3,cy-4,4,"#ffffff","none",0,'opacity=".85"');
+   s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="11" font-weight="900" fill="'+(t.id==="yellow"?"#493700":"#ffffff")+'">'+(tok.id+1)+'</text>';
+   s+='</g>';
+ }));
+ svg.innerHTML=s;
+ svg.querySelectorAll(".token.clickable").forEach(el=>{
+   el.addEventListener("click",()=>chooseToken(el.dataset.team,Number(el.dataset.token)));
+   el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();chooseToken(el.dataset.team,Number(el.dataset.token));}});
+ });
+}
+let selectedToken=null;
+function tokenPos(team,tok){
+ if(tok.progress<0){return BASES[team.id][tok.id];}
+ if(tok.progress>=57)return [7.5+(tok.id%2?-.18:.18),7.5+(Math.floor(tok.id/2)?-.18:.18)];
+ if(tok.progress<=51){let idx=(team.start+tok.progress)%52;return PATH[idx];}
+ return LANES[team.id][Math.min(4,tok.progress-52)];
+}
+function legalFor(team,roll){return team.tokens.filter(t=>{if(t.progress===57)return false;if(t.progress===-1)return roll===6;return t.progress+roll<=57;}).map(t=>t.id);}
+function addLog(icon,html){
+ logItems.unshift({icon,html});logItems=logItems.slice(0,7);
+ $("moveLog").innerHTML=logItems.map(x=>'<div class="log-item"><div class="log-icon">'+x.icon+'</div><div>'+x.html+'</div></div>').join("");
+ $("moveCount").textContent=totalMoves+" move"+(totalMoves===1?"":"s");
+}
+function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2200);}
+let audioCtx=null;
+function beep(freq=440,duration=.08,type="sine"){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=.045;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.stop(audioCtx.currentTime+duration);}catch(e){}}
+function setHint(text){$("hint").textContent=text;}
+function updateUI(){
+ $("player-red").classList.toggle("active",turn===0&&!gameOver);
+ $("player-yellow").classList.toggle("active",turn===1&&!gameOver);
+ $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
+ $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
+ $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
+ $("rollBtn").disabled=busy||gameOver||die!==null||turn!==0;
+ $("rollBtn").textContent=gameOver?"MATCH COMPLETE":die!==null&&turn===0?"CHOOSE A GLOWING TOKEN":turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
+ $("newBtn").disabled=busy&&!gameOver;
+ $("diceInstruction").textContent=gameOver?"Match finished":turn===0?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):"Nexus is calculating…";
+ $("diceHelp").textContent=die===null?"Roll a 6 to launch a token from base. A 6 earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
+ $("difficultyBtn").textContent=smart?"SMART":"NORMAL";
+ $("difficultyBtn").classList.toggle("on",smart);
+ $("difficultyBtn").setAttribute("aria-pressed",String(smart));
+ $("soundBtn").textContent=(soundOn?"🔊 Sound: on":"🔇 Sound: off");
+ drawBoard();
+}
+function rollDice(){
+ if(busy||die!==null||gameOver)return;
+ if(turn===0&&busy)return;
+ busy=true;
+ const face=$("diceFace");face.classList.add("rolling");beep(280,.06,"square");
+ let t=0;const spin=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(spin);die=1+Math.floor(Math.random()*6);face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);afterRoll();}},65);
+}
+function afterRoll(){
+ const team=teams[turn];legal=legalFor(team,die);selectedToken=null;
+ if(turn===0){
+   if(!legal.length){setHint("No legal move — turn passes.");$("diceInstruction").textContent="No legal move";addLog("🎲","You rolled <b>"+die+"</b> — no legal move.");updateUI();setTimeout(()=>finishTurn(die===6),850);return;}
+   setHint(legal.length===1?"One token can move — tap it.":"Choose one of the glowing tokens.");
+   $("diceInstruction").textContent=legal.length+" legal move"+(legal.length>1?"s":"")+" available";
+   addLog("🎲","You rolled a <b>"+die+"</b>. Choose a glowing token.");
+   updateUI();
+ }else{
+   setHint("Nexus is choosing a move…");$("diceInstruction").textContent="Nexus rolled "+die;
+   if(!legal.length){addLog("🎲","Nexus rolled <b>"+die+"</b> — no legal move.");updateUI();setTimeout(()=>finishTurn(die===6),800);return;}
+   updateUI();setTimeout(robotMove,smart?650:400);
+ }
+}
+function rankMove(team,tokenId,roll){
+ const tok=team.tokens.find(t=>t.id===tokenId);const next=tok.progress===-1?0:tok.progress+roll;
+ if(next===57)return 1000;
+ const global=next<=51?(team.start+next)%52:null;
+ let score=5+next*0.3;
+ if(tok.progress===-1)score+=smart?25:15;
+ if(global!==null){
+   if(SAFE.has(global))score+=smart?20:10;
+   const rival=teams[1-turn];const captured=rival.tokens.some(t=>t.progress>=0&&t.progress<=51&&((rival.start+t.progress)%52)===global);
+   if(captured&&!SAFE.has(global))score+=smart?180:90;
+   // Prefer moving out of danger if opponents could capture this token next.
+   const danger=[...SAFE].includes(global)?0:teams[1-turn].tokens.filter(t=>t.progress>=0&&t.progress<=51).some(t=>{const their=(rival.start+t.progress)%52;const dist=(global-their+52)%52;return dist>=1&&dist<=6;});
+   if(danger)score-=smart?14:5;
+ }
+ if(next>=52)score+=smart?22:10;
+ return score+Math.random()*2;
+}
+function robotMove(){
+ if(gameOver||turn!==1||die===null)return;
+ const id=legal.slice().sort((a,b)=>rankMove(teams[1],b,die)-rankMove(teams[1],a,die))[0];
+ doMove("yellow",id);
+}
+function chooseToken(teamId,id){
+ if(gameOver||busy||die===null||turn!==0||teamId!=="red"||!legal.includes(id))return;
+ doMove(teamId,id);
+}
+function doMove(teamId,id){
+ if(gameOver||die===null)return;
+ const team=teams.find(t=>t.id===teamId),tok=team.tokens.find(t=>t.id===id),roll=die,old=tok.progress;
+ tok.progress=old===-1?0:old+roll;
+ let captured=0;
+ const onRing=tok.progress<=51;
+ if(onRing){
+   const square=(team.start+tok.progress)%52;
+   if(!SAFE.has(square)){
+     teams.filter(t=>t.id!==teamId).forEach(other=>other.tokens.forEach(enemy=>{
+       if(enemy.progress>=0&&enemy.progress<=51&&(other.start+enemy.progress)%52===square){enemy.progress=-1;captured++;}
+     }));
+   }
+ }
+ totalMoves++;
+ let message=teamId==="red"?"You":"Nexus";
+ let action=old===-1?"launched token "+(id+1):"moved token "+(id+1);
+ if(tok.progress===57)action="brought token "+(id+1)+" home";
+ if(captured)action+=" and captured "+captured+" token"+(captured>1?"s":"");
+ addLog(teamId==="red"?"🔴":"🤖","<b>"+message+"</b> "+action+" with a "+roll+".");
+ if(captured){beep(180,.22,"sawtooth");toast("Capture! "+message+" sent a token back to base.");}
+ else if(tok.progress===57){beep(750,.12);setTimeout(()=>beep(980,.18),100);toast(message+" brought a token home!");}
+ else {beep(500,.07);}
+ die=null;legal=[];selectedToken=null;
+ const winner=team.tokens.every(t=>t.progress===57);
+ if(winner){gameOver=true;busy=false;updateUI();showWinner(teamId);return;}
+ updateUI();
+ finishTurn(roll===6);
+}
+function finishTurn(extra){
+ if(gameOver)return;
+ die=null;legal=[];selectedToken=null;busy=false;
+ if(!extra){turn=1-turn;}
+ updateUI();
+ if(extra){setHint((turn===0?"You":"Nexus")+" rolled a six — extra turn!");toast((turn===0?"You":"Nexus")+" get another turn!");}
+ else{setHint(turn===0?"Your turn — roll the dice.":"Nexus's turn.");}
+ if(turn===1){setTimeout(rollDice,620);}
+}
+function showWinner(teamId){
+ const human=teamId==="red";
+ $("winnerEmoji").textContent=human?"🏆":"🤖";
+ $("winnerTitle").textContent=human?"YOU WIN!":"NEXUS WINS!";
+ $("winnerText").textContent=human?"Brilliant match! You got all four tokens home. Ready to take on the robot again?":"Nexus completed the race this time. Start another match and see if you can beat the robot!";
+ $("winnerOverlay").classList.add("show");
+ setHint(human?"Victory! You won the match.":"Nexus won this match.");
+ addLog(human?"🏆":"🤖","<b>"+(human?"You":"Nexus")+" won</b> the match!");
+}
+function newGame(){
+ teams=makeTeams();turn=0;die=null;legal=[];busy=false;gameOver=false;turns=0;totalMoves=0;selectedToken=null;logItems=[];
+ $("diceFace").textContent="—";$("diceFace").setAttribute("aria-label","Dice not rolled");$("winnerOverlay").classList.remove("show");
+ addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
+}
+$("rollBtn").addEventListener("click",rollDice);
+$("newBtn").addEventListener("click",()=>{newGame();toast("New match ready — good luck!");});
+$("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
+$("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
+$("difficultyBtn").addEventListener("click",()=>{smart=!smart;$("difficultyBtn").textContent=smart?"SMART":"NORMAL";$("difficultyBtn").classList.toggle("on",smart);$("difficultyBtn").setAttribute("aria-pressed",String(smart));toast("Robot difficulty: "+(smart?"Smart":"Normal"));});
+$("year").textContent=new Date().getFullYear();
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&document.activeElement===document.body){e.preventDefault();if(turn===0&&die===null&&!busy&&!gameOver)rollDice();}if(e.key==="Escape")$("winnerOverlay").classList.remove("show");});
+newGame();
+})();
+</script>
+</body>
+</html>
