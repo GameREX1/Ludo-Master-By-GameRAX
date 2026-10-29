@@ -529,7 +529,7 @@ function newGame(){
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
 }
 $("rollBtn").addEventListener("click",rollDice);
-$("newBtn").addEventListener("click",()=>{if(multiplayer&&!multiplayer.finished){sendGameAction({kind:"reset"});newGame();toast("Match restarted for both players.");}else{newGame();toast("New match ready — good luck!");}});
+$("newBtn").addEventListener("click",()=>{if(multiplayer){multiplayer.finished=false;sendGameAction({kind:"reset"});newGame();toast("Match restarted for both players.");}else{newGame();toast("New match ready — good luck!");}});
 $("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
 $("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
 $("difficultyBtn").addEventListener("click",()=>{smart=!smart;$("difficultyBtn").textContent=smart?"SMART":"NORMAL";$("difficultyBtn").classList.toggle("on",smart);$("difficultyBtn").setAttribute("aria-pressed",String(smart));toast("Robot difficulty: "+(smart?"Smart":"Normal"));});
@@ -700,7 +700,7 @@ function sendGameAction(action){
 }
 async function finishGameInvite(){
  if(!multiplayer||!ludoSupabase)return;
- multiplayer.finished=true;
+ multiplayer.finished=true;sendGameAction({kind:"finished"});
  try{await ludoSupabase.from("ludo_game_invites").update({status:"finished"}).eq("id",multiplayer.inviteId);}
  catch(err){console.warn("Could not mark game invite finished",err);}
 }
@@ -715,7 +715,8 @@ function enterOnlineMatch(invite,partner,mySide){
   if(!payload||payload.user_id===ludoUser.id||!multiplayer||multiplayer.inviteId!==invite.id)return;
   if(payload.kind==="roll"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die===null)rollDice(Number(payload.value),true);
   else if(payload.kind==="move"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die!==null)doMove(payload.teamId,Number(payload.id),true);
-  else if(payload.kind==="reset"&&multiplayer.started)newGame();
+  else if(payload.kind==="reset"&&multiplayer.started){multiplayer.finished=false;newGame();}
+  else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start a replay from New Game.");}
  });
  channel.on("presence",{event:"sync"},()=>{
   if(!multiplayer||multiplayer.inviteId!==invite.id)return;
