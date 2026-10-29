@@ -403,6 +403,14 @@ function setHint(text){$("hint").textContent=text;}
 function updateUI(){
  $("player-red").classList.toggle("active",turn===0&&!gameOver);
  $("player-yellow").classList.toggle("active",turn===1&&!gameOver);
+ if(multiplayer){
+  const redName=multiplayer.mySide===0?"YOU":multiplayer.partner.username.toUpperCase();
+  const yellowName=multiplayer.mySide===1?"YOU":multiplayer.partner.username.toUpperCase();
+  $("player-red").querySelector(".playername").innerHTML=esc(redName)+' <span class="playerlabel">'+(multiplayer.mySide===0?"YOU":"FRIEND")+"</span>";
+  $("player-yellow").querySelector(".playername").innerHTML=esc(yellowName)+' <span class="playerlabel">'+(multiplayer.mySide===1?"YOU":"FRIEND")+"</span>";
+  $("player-red").querySelector(".playerdesc").textContent=multiplayer.mySide===0?"Red squad · You":"Red squad · "+multiplayer.partner.username;
+  $("player-yellow").querySelector(".playerdesc").textContent=multiplayer.mySide===1?"Yellow squad · You":"Yellow squad · "+multiplayer.partner.username;
+ }
  $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
