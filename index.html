@@ -137,6 +137,17 @@ footer a{color:var(--cyan);font-weight:900}
 .lobby-user-name{font-size:12px;font-weight:900;overflow-wrap:anywhere}
 .lobby-user-tag{color:var(--cyan);font-size:10px;margin-top:4px;overflow-wrap:anywhere}
 .lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.profile-customize-btn{display:none;width:100%;margin-top:8px}
+.profile-overlay{display:none;position:fixed;inset:0;background:#02050bdc;backdrop-filter:blur(10px);z-index:65;place-items:center;padding:16px}
+.profile-overlay.show{display:grid}
+.profile-dialog{position:relative;width:min(100%,460px);max-height:calc(100vh - 32px);overflow:auto;padding:24px;border:1px solid #304252;border-radius:20px;background:linear-gradient(145deg,#14202c,#080d14);box-shadow:0 25px 90px #000b}
+.profile-title{font-size:22px;font-weight:900;letter-spacing:-.7px;margin:3px 40px 6px 0}
+.profile-subtitle{color:#8e9eae;font-size:11px;line-height:1.7;margin-bottom:16px}
+.profile-avatar-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin:12px 0 18px}
+.profile-avatar-choice{display:grid;place-items:center;aspect-ratio:1;border:1px solid #2b3948;background:#081018;border-radius:12px;font-size:24px;cursor:pointer}
+.profile-avatar-choice.selected{border-color:var(--cyan);background:#10303a;box-shadow:0 0 0 2px #00d9ff22}
+.profile-field-label{display:block;font-size:10px;color:#aab8c6;font-weight:800;margin:14px 0 7px}
+@media(max-width:420px){.profile-avatar-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .lobby-btn{min-height:37px;padding:8px 9px;border-radius:9px;border:1px solid #304052;background:#121b26;color:#d6e0eb;font-size:10px;font-weight:900;cursor:pointer}
 .lobby-btn.primary{background:var(--cyan);border-color:var(--cyan);color:#051218}
 .lobby-btn:hover:not(:disabled){filter:brightness(1.1);border-color:var(--cyan)}
@@ -208,6 +219,7 @@ footer a{color:var(--cyan);font-weight:900}
           <button class="lobby-btn primary" type="button" id="lobbyLoginBtn">LOG IN</button>
           <button class="lobby-btn" type="button" id="lobbySignupBtn">SIGN UP</button>
         </div>
+        <button class="lobby-btn primary profile-customize-btn" id="profileCustomizeBtn" type="button">🎨 CUSTOMIZE PROFILE</button>
         <button class="lobby-btn" id="lobbyLogoutBtn" type="button" style="display:none;width:100%">LOG OUT</button>
         <div class="lobby-status" id="lobbyAuthStatus" aria-live="polite">Create an account to invite players by username.</div>
       </div>
@@ -275,6 +287,21 @@ footer a{color:var(--cyan);font-weight:900}
     <div class="auth-switch" id="authSwitchLine">Already have an account? <button type="button" id="authSwitchBtn">Log in</button></div>
     <div class="auth-note">Username rules: 3–20 letters, numbers or underscores. Never share your password with anyone.</div>
   </div>
+</div>
+
+<div class="profile-overlay" id="profileOverlay" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+  <form class="profile-dialog" id="profileForm">
+    <button class="auth-close" type="button" id="profileCloseBtn" aria-label="Close">×</button>
+    <div class="kicker">◆ YOUR PLAYER ID</div>
+    <h2 class="profile-title" id="profileTitle">Customize profile</h2>
+    <div class="profile-subtitle">Choose a display picture and a unique username. Your friends will see these changes too.</div>
+    <label class="profile-field-label">CHOOSE YOUR DISPLAY PICTURE</label>
+    <div class="profile-avatar-grid" id="profileAvatarGrid" role="group" aria-label="Choose display picture"></div>
+    <label class="profile-field-label" for="profileUsername">USERNAME</label>
+    <input class="auth-input" id="profileUsername" maxlength="20" minlength="3" autocomplete="username" pattern="[A-Za-z0-9_]{3,20}" required placeholder="3–20 letters, numbers or underscores">
+    <button class="primary-btn" id="profileSaveBtn" type="submit" style="margin-top:16px">SAVE PROFILE</button>
+    <div class="auth-note" id="profileNote" role="status" aria-live="polite"></div>
+  </form>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -495,7 +522,8 @@ $("difficultyBtn").addEventListener("click",()=>{smart=!smart;$("difficultyBtn")
 const LUDO_PUBLIC_URL="https://ludomaster.qd.je";
 const LUDO_SUPABASE_URL="https://pmmrwjdadzjsedshrhnq.supabase.co";
 const LUDO_SUPABASE_ANON_KEY="sb_publishable_Ud0bITW5Afyn7SfOV5Yu-w_9e4LpxhI";
-let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null;
+let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null,selectedProfileAvatar="🎮";
+const LUDO_AVATARS=["🎮","😎","🐱","🐼","🦊","🐸","🐯","🐉","👑","🚀","👾","🦄","⚽","🐺","🥷","🧙"];
 
 function lobbySetStatus(id,message,type){
  const el=$(id);if(!el)return;el.textContent=message||"";el.classList.remove("error","ok");if(type)el.classList.add(type);
@@ -523,6 +551,7 @@ function renderSignedOut(){
  $("lobbyAccountName").textContent="Guest player";
  $("lobbyAccountTag").textContent="@sign_in_to_play";
  $("lobbyAvatar").textContent="👤";
+ $("profileCustomizeBtn").style.display="none";
  $("lobbyGuestActions").style.display="grid";
  $("lobbyLogoutBtn").style.display="none";
  $("inviteUsername").disabled=true;$("inviteSendBtn").disabled=true;
@@ -538,7 +567,8 @@ function renderSignedIn(){
  const username=ludoProfile?.username||ludoUser?.email?.split("@")[0]||"Player";
  $("lobbyAccountName").textContent=username;
  $("lobbyAccountTag").textContent="@"+username;
- $("lobbyAvatar").textContent="🎮";
+ $("lobbyAvatar").textContent=ludoProfile?.avatar_emoji||"🎮";
+ $("profileCustomizeBtn").style.display="block";
  $("lobbyGuestActions").style.display="none";
  $("lobbyLogoutBtn").style.display="block";
  $("inviteUsername").disabled=false;$("inviteSendBtn").disabled=false;
@@ -546,10 +576,10 @@ function renderSignedIn(){
  lobbySetStatus("inviteStatus","Enter someone's exact username to invite them.");
 }
 function showLobbyRows(friends,incoming,outgoing){
- const row=(username,icon,detail,buttons="")=>'<div class="friend-row"><div class="friend-icon">'+icon+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state">'+lobbyEscape(detail)+'</div>'+buttons+'</div></div>';
- $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,"🟢","Friend · ready to invite")).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
- $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>')).join(""):'<div class="lobby-empty">No incoming requests.</div>';
- $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting")).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
+ const row=(username,icon,detail,buttons="")=>'<div class="friend-row"><div class="friend-icon">'+lobbyEscape(icon||"👤")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state">'+lobbyEscape(detail)+'</div>'+buttons+'</div></div>';
+ $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,f.avatar_emoji||"🟢","Friend · ready to invite")).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
+ $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,f.avatar_emoji||"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>')).join(""):'<div class="lobby-empty">No incoming requests.</div>';
+ $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,f.avatar_emoji||"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting")).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
  $("lobbyFriendCount").textContent=friends.length+" FRIEND"+(friends.length===1?"":"S");
  $("lobbyInviteCount").textContent=(incoming.length+outgoing.filter(f=>f.status==="pending").length)+" PENDING";
  document.querySelectorAll("[data-invite-action]").forEach(btn=>btn.addEventListener("click",()=>respondToInvite(Number(btn.dataset.inviteId),btn.dataset.inviteAction)));
@@ -562,7 +592,7 @@ async function loadLobby(){
   if(error)throw error;
   const ids=[...new Set((rows||[]).flatMap(r=>[r.sender_id,r.receiver_id]).filter(id=>id!==ludoUser.id))];
   let profiles=[];
-  if(ids.length){const res=await ludoSupabase.from("ludo_profiles").select("id,username").in("id",ids);if(res.error)throw res.error;profiles=res.data||[];}
+  if(ids.length){const res=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);if(res.error)throw res.error;profiles=res.data||[];}
   const byId=new Map(profiles.map(p=>[p.id,p]));
   const friends=[],incoming=[],outgoing=[];
   for(const r of rows||[]){
@@ -647,13 +677,13 @@ async function syncLobbyAuth(user){
  ludoUser=user||null;ludoProfile=null;
  if(!ludoUser){renderSignedOut();return;}
  try{
-  const {data,error}=await ludoSupabase.from("ludo_profiles").select("id,username").eq("id",ludoUser.id).maybeSingle();
+  const {data,error}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").eq("id",ludoUser.id).maybeSingle();
   if(error)throw error;
   ludoProfile=data;
   if(!ludoProfile){
    const desired=String(ludoUser.user_metadata?.ludo_username||ludoUser.email?.split("@")[0]||"player").toLowerCase().replace(/[^a-z0-9_]/g,"_").slice(0,20);
    if(!/^[a-z0-9_]{3,20}$/.test(desired))throw new Error("Your username profile is missing. Please sign up again with a valid username or contact support.");
-   const {data:created,error:createError}=await ludoSupabase.from("ludo_profiles").insert({id:ludoUser.id,username:desired}).select("id,username").single();
+   const {data:created,error:createError}=await ludoSupabase.from("ludo_profiles").insert({id:ludoUser.id,username:desired,avatar_emoji:"🎮"}).select("id,username,avatar_emoji").single();
    if(createError)throw createError;
    ludoProfile=created;
   }
@@ -679,6 +709,40 @@ async function initLobbyAuth(){
   else if(event==="SIGNED_IN"&&session?.user){syncLobbyAuth(session.user);}
  });
 }
+function buildProfileAvatarChoices(){
+ const grid=$("profileAvatarGrid");
+ grid.innerHTML=LUDO_AVATARS.map(avatar=>'<button class="profile-avatar-choice" type="button" data-profile-avatar="'+avatar+'" aria-label="Choose '+avatar+' avatar" aria-pressed="false">'+avatar+'</button>').join("");
+ grid.querySelectorAll("[data-profile-avatar]").forEach(btn=>btn.addEventListener("click",()=>{
+  selectedProfileAvatar=btn.dataset.profileAvatar;
+  grid.querySelectorAll("[data-profile-avatar]").forEach(b=>{const active=b.dataset.profileAvatar===selectedProfileAvatar;b.classList.toggle("selected",active);b.setAttribute("aria-pressed",String(active));});
+ }));
+}
+function openProfileEditor(){
+ if(!ludoUser||!ludoProfile){toast("Log in before customizing your profile.");return;}
+ selectedProfileAvatar=ludoProfile.avatar_emoji||"🎮";$("profileUsername").value=ludoProfile.username||"";
+ $("profileNote").textContent="";$("profileNote").className="auth-note";buildProfileAvatarChoices();
+ const chosen=[...$("profileAvatarGrid").querySelectorAll("[data-profile-avatar]")].find(b=>b.dataset.profileAvatar===selectedProfileAvatar);
+ if(chosen){chosen.classList.add("selected");chosen.setAttribute("aria-pressed","true");}
+ $("profileOverlay").classList.add("show");setTimeout(()=>$("profileUsername").focus(),50);
+}
+function closeProfileEditor(){$("profileOverlay").classList.remove("show");}
+async function saveProfile(event){
+ event.preventDefault();if(!ludoSupabase||!ludoUser||!ludoProfile)return;
+ const username=$("profileUsername").value.trim().toLowerCase();
+ if(!/^[a-z0-9_]{3,20}$/.test(username)){$("profileNote").textContent="Use 3–20 letters, numbers or underscores.";$("profileNote").className="auth-note error";return;}
+ $("profileSaveBtn").disabled=true;$("profileSaveBtn").textContent="SAVING…";$("profileNote").textContent="Saving your profile…";$("profileNote").className="auth-note";
+ try{
+  const {data,error}=await ludoSupabase.from("ludo_profiles").update({username,avatar_emoji:selectedProfileAvatar}).eq("id",ludoUser.id).select("id,username,avatar_emoji").single();
+  if(error)throw error;ludoProfile=data;renderSignedIn();await loadLobby();closeProfileEditor();toast("Profile updated successfully!");
+ }catch(err){const msg=String(err.message||"Could not save profile.");$("profileNote").textContent=msg.toLowerCase().includes("duplicate")||msg.toLowerCase().includes("unique")?"That username is already taken. Try another one.":msg;$("profileNote").className="auth-note error";}
+ finally{$("profileSaveBtn").disabled=false;$("profileSaveBtn").textContent="SAVE PROFILE";}
+}
+$("profileCustomizeBtn").addEventListener("click",openProfileEditor);
+$("profileForm").addEventListener("submit",saveProfile);
+$("profileCloseBtn").addEventListener("click",closeProfileEditor);
+$("profileOverlay").addEventListener("click",e=>{if(e.target===$("profileOverlay"))closeProfileEditor();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeProfileEditor();});
+
 $("lobbyLoginBtn").addEventListener("click",()=>openAuth("login"));
 $("lobbySignupBtn").addEventListener("click",()=>openAuth("signup"));
 $("lobbyLogoutBtn").addEventListener("click",async()=>{
