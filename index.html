@@ -120,7 +120,64 @@ footer a{color:var(--cyan);font-weight:900}
 @media(max-width:760px){.topbar{height:66px}.topright .pill{display:none}main{padding-top:20px}.layout{grid-template-columns:1fr}.rightcol{display:grid;grid-template-columns:1fr}.board-wrap{padding:10px}.card-head{padding:14px}.board-footer{padding:0 13px 14px;align-items:flex-start;flex-direction:column}#hint{text-align:left}.rules{grid-template-columns:1fr 1fr}.rules .rule:last-child{grid-column:1/-1}.hero{margin-top:4px}.hero p{font-size:12px}.brand img{width:37px;height:37px}.brand-name{font-size:15px}}
 @media(max-width:420px){.brand-sub{font-size:8px;letter-spacing:1.3px}.brand-name{font-size:13px}.topbar{padding:0 10px}.link-btn{padding:10px;font-size:10px}.rules{grid-template-columns:1fr}.rules .rule:last-child{grid-column:auto}.dice-face{width:70px;height:70px;font-size:38px}.hero h1{letter-spacing:-1.3px}.player{padding:10px}.token-count{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+/* =============== FRIENDS LOBBY / ACCOUNT UI =============== */
+.layout{grid-template-columns:245px minmax(0,1.25fr) minmax(280px,.72fr);gap:16px}
+.lobby{min-width:0;align-self:stretch}
+.lobby-section{padding:15px;border-bottom:1px solid #202b38}
+.lobby-section:last-child{border-bottom:0}
+.lobby-heading{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:13px}
+.lobby-heading strong{font-size:12px;font-weight:900;letter-spacing:.3px}
+.lobby-muted{color:#8797a8;font-size:10px;line-height:1.6}
+.lobby-user{display:flex;gap:10px;align-items:center;background:#0a1119;border:1px solid #263544;border-radius:12px;padding:11px;margin-bottom:12px}
+.lobby-avatar{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:#142a37;border:1px solid #1e5264;font-size:20px;flex-shrink:0}
+.lobby-user-name{font-size:12px;font-weight:900;overflow-wrap:anywhere}
+.lobby-user-tag{color:var(--cyan);font-size:10px;margin-top:4px;overflow-wrap:anywhere}
+.lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.lobby-btn{min-height:37px;padding:8px 9px;border-radius:9px;border:1px solid #304052;background:#121b26;color:#d6e0eb;font-size:10px;font-weight:900;cursor:pointer}
+.lobby-btn.primary{background:var(--cyan);border-color:var(--cyan);color:#051218}
+.lobby-btn:hover:not(:disabled){filter:brightness(1.1);border-color:var(--cyan)}
+.lobby-btn:disabled{opacity:.45;cursor:not-allowed}
+.lobby-input{display:block;width:100%;min-width:0;padding:11px 10px;border-radius:9px;border:1px solid #2b3948;background:#060b11;color:#fff;font:inherit;font-size:11px;outline:none}
+.lobby-input:focus{border-color:var(--cyan);box-shadow:0 0 0 2px #00d9ff16}
+.lobby-form{display:flex;flex-direction:column;gap:8px}
+.lobby-status{min-height:14px;margin-top:8px;color:#9aabba;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.lobby-status.error{color:#ff8190}
+.lobby-status.ok{color:#52e7af}
+.lobby-list{display:flex;flex-direction:column;gap:8px;max-height:38vh;overflow-y:auto}
+.lobby-empty{color:#7b8a99;font-size:10px;line-height:1.7;padding:10px 8px;border:1px dashed #2b3744;border-radius:9px;text-align:center}
+.friend-row{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #202e3d;border-radius:10px;background:#0a1119;min-width:0}
+.friend-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#172330;flex-shrink:0;font-size:15px}
+.friend-details{min-width:0;flex:1}
+.friend-name{font-size:10px;font-weight:900;overflow-wrap:anywhere}
+.friend-state{color:#8393a3;font-size:9px;margin-top:4px;line-height:1.4}
+.friend-buttons{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
+.friend-buttons button{padding:5px 7px;border-radius:6px;border:1px solid #344656;background:#13202b;color:#e1eaf1;font-size:9px;font-weight:800;cursor:pointer}
+.friend-buttons button.accept{background:#123d32;color:#6bf0bb;border-color:#24664f}
+.friend-buttons button.decline{color:#ff9aa5}
+.lobby-count{font-size:9px;border:1px solid #283949;border-radius:6px;padding:4px 6px;color:#97a7b7}
+.lobby-split{font-size:9px;font-weight:900;letter-spacing:1px;color:#7e91a3;text-transform:uppercase;margin:12px 0 7px}
+.auth-overlay{display:none;position:fixed;inset:0;background:#02050bdc;backdrop-filter:blur(10px);z-index:60;place-items:center;padding:16px}
+.auth-overlay.show{display:grid}
+.auth-dialog{position:relative;width:min(100%,420px);max-height:calc(100vh - 32px);overflow:auto;padding:25px;border:1px solid #304252;border-radius:20px;background:linear-gradient(145deg,#14202c,#080d14);box-shadow:0 25px 90px #000b}
+.auth-close{position:absolute;right:14px;top:12px;width:32px;height:32px;border-radius:8px;border:1px solid #2c3b49;background:#0e151e;color:#cfdae5;font-size:20px;cursor:pointer}
+.auth-title{font-size:22px;font-weight:900;letter-spacing:-.8px;margin:3px 40px 6px 0}
+.auth-subtitle{color:#8e9eae;font-size:11px;line-height:1.7;margin-bottom:18px}
+.auth-label{font-size:10px;color:#aab8c6;font-weight:800;margin:4px 0 -3px}
+.auth-form{display:flex;flex-direction:column;gap:10px}
+.auth-input{display:block;width:100%;padding:12px 11px;border-radius:9px;border:1px solid #2b3948;background:#060b11;color:#fff;font:inherit;font-size:12px;outline:none}
+.auth-input:focus{border-color:var(--cyan)}
+.auth-switch{font-size:11px;color:#91a1b1;text-align:center;line-height:1.8;margin-top:15px}
+.auth-switch button{border:0;background:none;color:var(--cyan);font-weight:900;cursor:pointer}
+.auth-note{font-size:10px;line-height:1.6;margin-top:12px;color:#8696a6;overflow-wrap:anywhere}
+.auth-note.error{color:#ff8190}.auth-note.ok{color:#61e6b2}
+.fullscreen-btn{border:1px solid #304052;background:#111b26;color:#e7edf4;border-radius:9px;padding:7px 10px;font-size:10px;font-weight:900;cursor:pointer;white-space:nowrap}
+.fullscreen-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+@media(max-width:1150px){.layout{grid-template-columns:220px minmax(0,1fr)}.rightcol{grid-column:2;display:grid;grid-template-columns:1fr 1fr;align-items:start}.rightcol .log-card{grid-column:1/-1}}
+@media(max-width:760px){.layout{grid-template-columns:1fr}.lobby{order:0}.rightcol{grid-column:auto;display:flex}.lobby-list{max-height:260px}.lobby-actions{grid-template-columns:1fr 1fr}.layout>.card:first-of-type{order:1}.rightcol{order:2}}
+
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header class="topbar">
@@ -136,8 +193,43 @@ footer a{color:var(--cyan);font-weight:900}
     <div class="hero-badge"><span class="robot">🤖</span><div><b>NEXUS AI ONLINE</b><small>Smart move selection enabled</small></div></div>
   </section>
   <div class="layout">
+
+    <aside class="card lobby" id="lobbySidebar" aria-label="Friends and account sidebar">
+      <div class="card-head"><div><div class="card-title">YOUR LOBBY</div><div class="card-sub">Sign in to invite friends</div></div><span class="lobby-count" id="lobbyFriendCount">0 FRIENDS</span></div>
+      <div class="lobby-section">
+        <div class="lobby-user">
+          <div class="lobby-avatar" id="lobbyAvatar">👤</div>
+          <div style="min-width:0;flex:1"><div class="lobby-user-name" id="lobbyAccountName">Guest player</div><div class="lobby-user-tag" id="lobbyAccountTag">@sign_in_to_play</div></div>
+        </div>
+        <div class="lobby-actions" id="lobbyGuestActions">
+          <button class="lobby-btn primary" type="button" id="lobbyLoginBtn">LOG IN</button>
+          <button class="lobby-btn" type="button" id="lobbySignupBtn">SIGN UP</button>
+        </div>
+        <button class="lobby-btn" id="lobbyLogoutBtn" type="button" style="display:none;width:100%">LOG OUT</button>
+        <div class="lobby-status" id="lobbyAuthStatus" aria-live="polite">Create an account to invite players by username.</div>
+      </div>
+      <div class="lobby-section">
+        <div class="lobby-heading"><strong>INVITE A PLAYER</strong><span class="lobby-count">USERNAME</span></div>
+        <form class="lobby-form" id="inviteForm">
+          <input class="lobby-input" id="inviteUsername" maxlength="20" autocomplete="off" placeholder="Enter exact username" aria-label="Friend username" disabled>
+          <button class="lobby-btn primary" id="inviteSendBtn" type="submit" disabled>＋ SEND INVITE</button>
+        </form>
+        <div class="lobby-status" id="inviteStatus" aria-live="polite">Log in before sending invitations.</div>
+      </div>
+      <div class="lobby-section">
+        <div class="lobby-heading"><strong>FRIENDS & INVITES</strong><span class="lobby-count" id="lobbyInviteCount">0 PENDING</span></div>
+        <div class="lobby-split">Friends</div>
+        <div class="lobby-list" id="friendsList"><div class="lobby-empty">Log in to see your friends here.</div></div>
+        <div class="lobby-split">Incoming requests</div>
+        <div class="lobby-list" id="incomingList"><div class="lobby-empty">No incoming requests.</div></div>
+        <div class="lobby-split">Invites you sent</div>
+        <div class="lobby-list" id="outgoingList"><div class="lobby-empty">Your sent invites will appear here.</div></div>
+        <div class="lobby-status" id="lobbyListStatus" aria-live="polite"></div>
+      </div>
+    </aside>
+
     <section class="card">
-      <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><span class="board-label">2 PLAYERS</span></div>
+      <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><div style="display:flex;align-items:center;gap:7px"><button class="fullscreen-btn" type="button" id="boardFullscreenBtn" title="Toggle fullscreen">⛶ FULLSCREEN</button><span class="board-label">2 PLAYERS</span></div></div>
       <div class="board-wrap"><svg id="board" viewBox="0 0 600 600" role="img" aria-label="Interactive Ludo board"></svg></div>
       <div class="board-footer"><div class="legend"><span><i style="background:var(--red)"></i>You · Red</span><span><i style="background:var(--yellow)"></i>Nexus · Yellow</span><span><i style="background:var(--green)"></i>Green lane</span><span><i style="background:var(--blue)"></i>Blue lane</span></div><div id="hint" aria-live="polite">Your turn — roll the dice.</div></div>
     </section>
@@ -158,14 +250,30 @@ footer a{color:var(--cyan);font-weight:900}
       </section>
       <section class="card log-card"><div class="log-head"><h2>RECENT MOVES</h2><span id="moveCount">0 moves</span></div><div id="moveLog"><div class="log-item"><div class="log-icon">🎲</div><div>Match ready. <b>Roll to start.</b></div></div></div></section>
     </aside>
-  </div>
-  <section class="rules">
-    <div class="rule"><div class="rule-icon">🎯</div><b>Roll a six to start</b><p>Tokens leave base only with a 6. Any legal token can be chosen when more than one move is available.</p></div>
-    <div class="rule"><div class="rule-icon">🛡️</div><b>Safe squares & captures</b><p>Starred squares are safe. Land on an unprotected rival token to send it back to base.</p></div>
-    <div class="rule"><div class="rule-icon">🏁</div><b>Exact roll to finish</b><p>Move through your colored home lane. Get all four tokens to the center to win the match.</p></div>
-  </section>
-</main>
+  </div></main>
 <footer><img src="https://cdn.corenexis.com/f/i2qQMduvFbC.png" alt="GameRAX">A free game made for the <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">GameRAX</a> universe · <span id="year"></span> · Play more games at <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">gamerax.online</a></footer>
+
+<div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="auth-dialog">
+    <button class="auth-close" type="button" id="authCloseBtn" aria-label="Close">×</button>
+    <div class="kicker" id="authKicker">◆ GameRAX PLAYER ACCOUNT</div>
+    <h2 class="auth-title" id="authTitle">Create your account</h2>
+    <div class="auth-subtitle" id="authSubtitle">Choose a unique username so friends can find and invite you.</div>
+    <form class="auth-form" id="authForm">
+      <label class="auth-label" for="authUsername">USERNAME</label>
+      <input class="auth-input" id="authUsername" maxlength="20" minlength="3" autocomplete="username" placeholder="e.g. rayyan_gamer" pattern="[A-Za-z0-9_]{3,20}">
+      <label class="auth-label" for="authEmail">EMAIL ADDRESS</label>
+      <input class="auth-input" type="email" id="authEmail" autocomplete="email" required placeholder="you@example.com">
+      <label class="auth-label" for="authPassword">PASSWORD</label>
+      <input class="auth-input" type="password" id="authPassword" autocomplete="current-password" minlength="6" required placeholder="At least 6 characters">
+      <button class="primary-btn" id="authSubmitBtn" type="submit">CREATE ACCOUNT</button>
+    </form>
+    <div class="auth-note" id="authNote" role="status" aria-live="polite"></div>
+    <div class="auth-switch" id="authSwitchLine">Already have an account? <button type="button" id="authSwitchBtn">Log in</button></div>
+    <div class="auth-note">Username rules: 3–20 letters, numbers or underscores. Never share your password with anyone.</div>
+  </div>
+</div>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="winner-overlay" id="winnerOverlay" role="dialog" aria-modal="true" aria-labelledby="winnerTitle"><div class="winner-box"><div class="winner-emoji" id="winnerEmoji">🏆</div><h2 id="winnerTitle">You won!</h2><p id="winnerText">Great match!</p><button class="primary-btn" id="playAgainBtn">PLAY AGAIN</button><div style="margin-top:12px"><a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#00d9ff;font-weight:800">Explore more games on GameRAX ↗</a></div></div></div>
 <script>
@@ -376,6 +484,206 @@ $("newBtn").addEventListener("click",()=>{newGame();toast("New match ready — g
 $("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
 $("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
 $("difficultyBtn").addEventListener("click",()=>{smart=!smart;$("difficultyBtn").textContent=smart?"SMART":"NORMAL";$("difficultyBtn").classList.toggle("on",smart);$("difficultyBtn").setAttribute("aria-pressed",String(smart));toast("Robot difficulty: "+(smart?"Smart":"Normal"));});
+
+/* ================= LUDO ACCOUNT & FRIEND INVITES =================
+   Dedicated ludo_* tables are created by supabase-setup.sql.
+   This uses only those tables; existing GameRAX tables are untouched.
+=================================================================== */
+const LUDO_SUPABASE_URL="https://pmmrwjdadzjsedshrhnq.supabase.co";
+const LUDO_SUPABASE_ANON_KEY="sb_publishable_Ud0bITW5Afyn7SfOV5Yu-w_9e4LpxhI";
+let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null;
+
+function lobbySetStatus(id,message,type){
+ const el=$(id);if(!el)return;el.textContent=message||"";el.classList.remove("error","ok");if(type)el.classList.add(type);
+}
+function lobbyEscape(value){
+ return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function openAuth(mode){
+ authMode=mode==="login"?"login":"signup";
+ $("authOverlay").classList.add("show");
+ $("authTitle").textContent=authMode==="signup"?"Create your account":"Welcome back";
+ $("authSubtitle").textContent=authMode==="signup"?"Choose a unique username so friends can find and invite you.":"Log in with your email and password to access your friend list.";
+ $("authSubmitBtn").textContent=authMode==="signup"?"CREATE ACCOUNT":"LOG IN";
+ $("authSwitchLine").innerHTML=authMode==="signup"?'Already have an account? <button type="button" id="authSwitchBtn">Log in</button>':'New to Ludo Master? <button type="button" id="authSwitchBtn">Create account</button>';
+ $("authUsername").style.display=authMode==="signup"?"block":"none";
+ document.querySelector('label[for="authUsername"]').style.display=authMode==="signup"?"block":"none";
+ $("authUsername").required=authMode==="signup";
+ $("authPassword").autocomplete=authMode==="signup"?"new-password":"current-password";
+ lobbySetStatus("authNote","","");
+ $("authSwitchBtn").addEventListener("click",()=>openAuth(authMode==="signup"?"login":"signup"),{once:true});
+ setTimeout(()=>$(authMode==="signup"?"authUsername":"authEmail").focus(),50);
+}
+function closeAuth(){$("authOverlay").classList.remove("show");}
+function renderSignedOut(){
+ $("lobbyAccountName").textContent="Guest player";
+ $("lobbyAccountTag").textContent="@sign_in_to_play";
+ $("lobbyAvatar").textContent="👤";
+ $("lobbyGuestActions").style.display="grid";
+ $("lobbyLogoutBtn").style.display="none";
+ $("inviteUsername").disabled=true;$("inviteSendBtn").disabled=true;
+ $("lobbyFriendCount").textContent="0 FRIENDS";$("lobbyInviteCount").textContent="0 PENDING";
+ $("friendsList").innerHTML='<div class="lobby-empty">Log in to see your friends here.</div>';
+ $("incomingList").innerHTML='<div class="lobby-empty">No incoming requests.</div>';
+ $("outgoingList").innerHTML='<div class="lobby-empty">Your sent invites will appear here.</div>';
+ lobbySetStatus("lobbyAuthStatus","Create an account to invite players by username.");
+ lobbySetStatus("inviteStatus","Log in before sending invitations.");
+ lobbySetStatus("lobbyListStatus","");
+}
+function renderSignedIn(){
+ const username=ludoProfile?.username||ludoUser?.email?.split("@")[0]||"Player";
+ $("lobbyAccountName").textContent=username;
+ $("lobbyAccountTag").textContent="@"+username;
+ $("lobbyAvatar").textContent="🎮";
+ $("lobbyGuestActions").style.display="none";
+ $("lobbyLogoutBtn").style.display="block";
+ $("inviteUsername").disabled=false;$("inviteSendBtn").disabled=false;
+ lobbySetStatus("lobbyAuthStatus","Signed in securely as @"+username,"ok");
+ lobbySetStatus("inviteStatus","Enter someone's exact username to invite them.");
+}
+function showLobbyRows(friends,incoming,outgoing){
+ const row=(username,icon,detail,buttons="")=>'<div class="friend-row"><div class="friend-icon">'+icon+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state">'+lobbyEscape(detail)+'</div>'+buttons+'</div></div>';
+ $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,"🟢","Friend · ready to invite")).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
+ $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>')).join(""):'<div class="lobby-empty">No incoming requests.</div>';
+ $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting")).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
+ $("lobbyFriendCount").textContent=friends.length+" FRIEND"+(friends.length===1?"":"S");
+ $("lobbyInviteCount").textContent=(incoming.length+outgoing.filter(f=>f.status==="pending").length)+" PENDING";
+ document.querySelectorAll("[data-invite-action]").forEach(btn=>btn.addEventListener("click",()=>respondToInvite(Number(btn.dataset.inviteId),btn.dataset.inviteAction)));
+}
+async function loadLobby(){
+ if(!ludoSupabase||!ludoUser)return;
+ lobbySetStatus("lobbyListStatus","Refreshing your friends…");
+ try{
+  const {data:rows,error}=await ludoSupabase.from("ludo_friend_requests").select("id,sender_id,receiver_id,status,created_at").or("sender_id.eq."+ludoUser.id+",receiver_id.eq."+ludoUser.id).order("created_at",{ascending:false}).limit(150);
+  if(error)throw error;
+  const ids=[...new Set((rows||[]).flatMap(r=>[r.sender_id,r.receiver_id]).filter(id=>id!==ludoUser.id))];
+  let profiles=[];
+  if(ids.length){const res=await ludoSupabase.from("ludo_profiles").select("id,username").in("id",ids);if(res.error)throw res.error;profiles=res.data||[];}
+  const byId=new Map(profiles.map(p=>[p.id,p]));
+  const friends=[],incoming=[],outgoing=[];
+  for(const r of rows||[]){
+   const otherId=r.sender_id===ludoUser.id?r.receiver_id:r.sender_id;
+   const other=byId.get(otherId);if(!other)continue;
+   if(r.status==="accepted"){if(!friends.some(f=>f.id===other.id))friends.push(other);}
+   else if(r.status==="pending"&&r.receiver_id===ludoUser.id){incoming.push({...other,requestId:r.id,id:r.id,profileId:other.id});}
+   else if(r.status==="pending"&&r.sender_id===ludoUser.id){outgoing.push({...other,id:other.id,inviteId:r.id,status:"pending"});}
+  }
+  showLobbyRows(friends,incoming,outgoing);
+  lobbySetStatus("lobbyListStatus","");
+ }catch(err){
+  console.error("Ludo lobby load error:",err);
+  lobbySetStatus("lobbyListStatus","Friend list unavailable. Run supabase-setup.sql in the linked Supabase project's SQL Editor.", "error");
+ }
+}
+async function sendFriendInvite(event){
+ event.preventDefault();if(!ludoSupabase||!ludoUser||lobbyBusy)return;
+ const username=$("inviteUsername").value.trim().toLowerCase();
+ if(!/^[a-z0-9_]{3,20}$/.test(username)){lobbySetStatus("inviteStatus","Usernames must be 3–20 letters, numbers or underscores.","error");return;}
+ lobbyBusy=true;$("inviteSendBtn").disabled=true;lobbySetStatus("inviteStatus","Looking up @"+username+"…");
+ try{
+  const {data:target,error}=await ludoSupabase.from("ludo_profiles").select("id,username").eq("username",username).maybeSingle();
+  if(error)throw error;
+  if(!target)throw new Error("No Ludo player found with username @"+username+". Check the spelling.");
+  if(target.id===ludoUser.id)throw new Error("You cannot invite your own account.");
+  const {data:existing,error:existingError}=await ludoSupabase.from("ludo_friend_requests").select("id,status,sender_id,receiver_id").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+target.id+"),and(sender_id.eq."+target.id+",receiver_id.eq."+ludoUser.id+")").limit(10);
+  if(existingError)throw existingError;
+  if((existing||[]).some(r=>r.status==="accepted"))throw new Error("@"+username+" is already your friend.");
+  if((existing||[]).some(r=>r.status==="pending")){
+   const pending=(existing||[]).find(r=>r.status==="pending");
+   if(pending.receiver_id===ludoUser.id)throw new Error("@"+username+" has already invited you. Accept the request in Incoming requests.");
+   throw new Error("You have already invited @"+username+".");
+  }
+  const {error:insertError}=await ludoSupabase.from("ludo_friend_requests").insert({sender_id:ludoUser.id,receiver_id:target.id,status:"pending"});
+  if(insertError)throw insertError;
+  $("inviteUsername").value="";
+  lobbySetStatus("inviteStatus","Invite sent to @"+target.username+". They can accept it after logging in.","ok");
+  await loadLobby();
+ }catch(err){lobbySetStatus("inviteStatus",err.message||"Could not send invitation.","error");}
+ finally{lobbyBusy=false;$("inviteSendBtn").disabled=!ludoUser;}
+}
+async function respondToInvite(requestId,action){
+ if(!ludoSupabase||!ludoUser)return;
+ const status=action==="accept"?"accepted":"declined";
+ lobbySetStatus("lobbyListStatus",action==="accept"?"Accepting invitation…":"Declining invitation…");
+ try{
+  const {error}=await ludoSupabase.from("ludo_friend_requests").update({status}).eq("id",requestId).eq("receiver_id",ludoUser.id);
+  if(error)throw error;
+  lobbySetStatus("lobbyListStatus",action==="accept"?"Friend added successfully.":"Invitation declined.",action==="accept"?"ok":"");
+  await loadLobby();
+ }catch(err){lobbySetStatus("lobbyListStatus",err.message||"Could not update invitation.","error");}
+}
+async function onAuthFormSubmit(event){
+ event.preventDefault();if(!ludoSupabase)return;
+ const email=$("authEmail").value.trim().toLowerCase(),password=$("authPassword").value;
+ const username=$("authUsername").value.trim().toLowerCase();
+ if(authMode==="signup"&&!/^[a-z0-9_]{3,20}$/.test(username)){lobbySetStatus("authNote","Choose a unique 3–20 character username using letters, numbers or underscores.","error");return;}
+ $("authSubmitBtn").disabled=true;$("authSubmitBtn").textContent=authMode==="signup"?"CREATING ACCOUNT…":"LOGGING IN…";
+ lobbySetStatus("authNote",authMode==="signup"?"Creating your account…":"Signing in…");
+ try{
+  if(authMode==="signup"){
+   const {data,error}=await ludoSupabase.auth.signUp({email,password,options:{data:{ludo_username:username}}});
+   if(error)throw error;
+   if(data.session){
+    lobbySetStatus("authNote","Account created successfully!","ok");
+    closeAuth();await syncLobbyAuth(data.session.user);
+   }else{
+    lobbySetStatus("authNote","Account created. Check your email for the verification link, then log in here.","ok");
+   }
+  }else{
+   const {data,error}=await ludoSupabase.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   closeAuth();await syncLobbyAuth(data.user);
+  }
+ }catch(err){
+  const msg=String(err.message||"Could not complete account action.");
+  lobbySetStatus("authNote",msg+(msg.toLowerCase().includes("ludo_profiles")||msg.toLowerCase().includes("database")?" — ensure supabase-setup.sql has been run.":""),"error");
+ }finally{$("authSubmitBtn").disabled=false;$("authSubmitBtn").textContent=authMode==="signup"?"CREATE ACCOUNT":"LOG IN";}
+}
+async function syncLobbyAuth(user){
+ ludoUser=user||null;ludoProfile=null;
+ if(!ludoUser){renderSignedOut();return;}
+ try{
+  const {data,error}=await ludoSupabase.from("ludo_profiles").select("id,username").eq("id",ludoUser.id).maybeSingle();
+  if(error)throw error;
+  ludoProfile=data;
+  renderSignedIn();await loadLobby();
+  if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);
+  lobbyRefreshTimer=setInterval(()=>{if(ludoUser)loadLobby();},20000);
+ }catch(err){
+  console.error("Ludo profile error:",err);
+  renderSignedIn();lobbySetStatus("lobbyAuthStatus","Account signed in, but Ludo profile is not ready. Run supabase-setup.sql in Supabase.","error");
+  lobbySetStatus("lobbyListStatus","Backend setup is required before username invitations can work.","error");
+ }
+}
+async function initLobbyAuth(){
+ if(!window.supabase||!window.supabase.createClient){
+  lobbySetStatus("lobbyAuthStatus","Login library could not load. Check your internet connection.","error");renderSignedOut();return;
+ }
+ ludoSupabase=window.supabase.createClient(LUDO_SUPABASE_URL,LUDO_SUPABASE_ANON_KEY);
+ const {data,error}=await ludoSupabase.auth.getSession();
+ if(error){console.warn(error);renderSignedOut();return;}
+ if(data.session)await syncLobbyAuth(data.session.user);else renderSignedOut();
+ ludoSupabase.auth.onAuthStateChange((event,session)=>{
+  if(event==="SIGNED_OUT"){ludoUser=null;ludoProfile=null;if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);renderSignedOut();}
+  else if(event==="SIGNED_IN"&&session?.user){syncLobbyAuth(session.user);}
+ });
+}
+$("lobbyLoginBtn").addEventListener("click",()=>openAuth("login"));
+$("lobbySignupBtn").addEventListener("click",()=>openAuth("signup"));
+$("lobbyLogoutBtn").addEventListener("click",async()=>{
+ if(!ludoSupabase)return;
+ const {error}=await ludoSupabase.auth.signOut();
+ if(error){lobbySetStatus("lobbyAuthStatus",error.message,"error");return;}
+ ludoUser=null;ludoProfile=null;if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);renderSignedOut();lobbySetStatus("lobbyAuthStatus","You have been logged out.","ok");
+});
+$("inviteForm").addEventListener("submit",sendFriendInvite);
+$("authForm").addEventListener("submit",onAuthFormSubmit);
+$("authCloseBtn").addEventListener("click",closeAuth);
+$("authOverlay").addEventListener("click",e=>{if(e.target===$("authOverlay"))closeAuth();});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeAuth();});
+initLobbyAuth().catch(err=>{console.error(err);renderSignedOut();lobbySetStatus("lobbyAuthStatus","Could not initialize accounts. Check the connection and database setup.","error");});
+
+
 $("year").textContent=new Date().getFullYear();
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&document.activeElement===document.body){e.preventDefault();if(turn===0&&die===null&&!busy&&!gameOver)rollDice();}if(e.key==="Escape")$("winnerOverlay").classList.remove("show");});
 newGame();
