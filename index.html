@@ -159,6 +159,11 @@ footer a{color:var(--cyan);font-weight:900}
 .lobby-status.error{color:#ff8190}
 .lobby-status.ok{color:#52e7af}
 .lobby-list{display:flex;flex-direction:column;gap:8px;max-height:38vh;overflow-y:auto}
+.game-invite-btn{margin-top:7px;width:100%;padding:6px 8px;border-radius:7px;border:1px solid #17677a;background:#0c2b35;color:#77eaff;font-size:9px;font-weight:900;cursor:pointer}
+.game-request-actions{display:flex;gap:5px;margin-top:7px}
+.game-request-actions button{flex:1;padding:6px;border:1px solid #315065;border-radius:7px;background:#122330;color:#dff7ff;font-size:9px;font-weight:900;cursor:pointer}
+.game-request-actions .accept{background:#104334;border-color:#24664f;color:#72f0bf}
+.game-invite-status{font-size:10px;line-height:1.6;color:#8e9eae;margin-top:8px;overflow-wrap:anywhere}
 .lobby-empty{color:#7b8a99;font-size:10px;line-height:1.7;padding:10px 8px;border:1px dashed #2b3744;border-radius:9px;text-align:center}
 .friend-row{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #202e3d;border-radius:10px;background:#0a1119;min-width:0}
 .friend-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#172330;flex-shrink:0;font-size:15px}
@@ -239,6 +244,7 @@ footer a{color:var(--cyan);font-weight:900}
         <div class="lobby-list" id="incomingList"><div class="lobby-empty">No incoming requests.</div></div>
         <div class="lobby-split">Invites you sent</div>
         <div class="lobby-list" id="outgoingList"><div class="lobby-empty">Your sent invites will appear here.</div></div>
+        <div class="lobby-split">GAME INVITES</div><div class="lobby-list" id="gameIncomingList"><div class="lobby-empty">No game invitations.</div></div><div class="game-invite-status" id="gameInviteStatus" aria-live="polite"></div>
         <div class="lobby-status" id="lobbyListStatus" aria-live="polite"></div>
       </div>
     </aside>
@@ -318,6 +324,7 @@ const LANES={red:[[1,7],[2,7],[3,7],[4,7],[5,7]],green:[[7,1],[7,2],[7,3],[7,4],
 const SAFE=new Set([0,8,13,21,26,34,39,47]);
 const BASES={red:[[1.7,1.7],[4.3,1.7],[1.7,4.3],[4.3,4.3]],green:[[10.7,1.7],[13.3,1.7],[10.7,4.3],[13.3,4.3]],yellow:[[10.7,10.7],[13.3,10.7],[10.7,13.3],[13.3,13.3]],blue:[[1.7,10.7],[4.3,10.7],[1.7,13.3],[4.3,13.3]]};
 let teams,turn=0,die=null,legal=[],busy=false,gameOver=false,smart=true,soundOn=true,turns=0,totalMoves=0,toastTimer,logItems=[];
+let multiplayer=null,gameInviteBusy=false;
 const svg=$("board");
 function makeTeams(){return [{id:"red",name:"You",start:0,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))},{id:"yellow",name:"Nexus",start:26,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}];}
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -360,7 +367,7 @@ function drawBoard(){
  const offsets=[[0,0],[-8,-8],[8,-8],[-8,8],[8,8],[0,-10],[0,10]];
  teams.forEach(t=>t.tokens.forEach(tok=>{
    const pos=tokenPos(t,tok),key=pos[0].toFixed(2)+","+pos[1].toFixed(2),arr=groups.get(key)||[],idx=arr.findIndex(z=>z.t.id===t.id&&z.tok.id===tok.id),off=arr.length>1?(offsets[idx%offsets.length]||[0,0]):[0,0],cx=pos[0]*40+20+off[0],cy=pos[1]*40+20+off[1];
-   const isLegal=turn===0&&legal.includes(tok.id)&&!busy&&!gameOver;
+   const isLegal=(multiplayer?turn===multiplayer.mySide:turn===0)&&legal.includes(tok.id)&&!busy&&!gameOver;
    const isSelected=selectedToken===tok.id;
    let stroke=isLegal?"#ffffff":"#17202a",sw=isLegal?3:2;
    s+='<g class="token '+(isLegal?"clickable":"")+'" data-team="'+t.id+'" data-token="'+tok.id+'" tabindex="'+(isLegal?0:-1)+'" role="button" aria-label="'+t.name+' token '+(tok.id+1)+(isLegal?", legal move":"")+'" opacity="'+(isLegal?1:0.96)+'">';
@@ -399,10 +406,11 @@ function updateUI(){
  $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
- $("rollBtn").disabled=busy||gameOver||die!==null||turn!==0;
- $("rollBtn").textContent=gameOver?"MATCH COMPLETE":die!==null&&turn===0?"CHOOSE A GLOWING TOKEN":turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
+ const localTurn=multiplayer?turn===multiplayer.mySide:turn===0;
+ $("rollBtn").disabled=busy||gameOver||die!==null||!localTurn;
+ $("rollBtn").textContent=gameOver?"MATCH COMPLETE":die!==null&&localTurn?"CHOOSE A GLOWING TOKEN":multiplayer&&!localTurn?"WAITING FOR FRIEND…":!multiplayer&&turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
  $("newBtn").disabled=busy&&!gameOver;
- $("diceInstruction").textContent=gameOver?"Match finished":turn===0?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):"Nexus is calculating…";
+ $("diceInstruction").textContent=gameOver?"Match finished":localTurn?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):multiplayer?"Your friend is playing…":"Nexus is calculating…";
  $("diceHelp").textContent=die===null?"Roll a 6 to launch a token from base. A 6 earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
  $("difficultyBtn").textContent=smart?"SMART":"NORMAL";
  $("difficultyBtn").classList.toggle("on",smart);
@@ -410,25 +418,26 @@ function updateUI(){
  $("soundBtn").textContent=(soundOn?"🔊 Sound: on":"🔇 Sound: off");
  drawBoard();
 }
-function rollDice(){
+function rollDice(forcedValue=null,fromRemote=false){
  if(busy||die!==null||gameOver)return;
- if(turn===0&&busy)return;
+ if(multiplayer&&!fromRemote&&turn!==multiplayer.mySide)return;
+ if(!multiplayer&&!fromRemote&&turn!==0)return;
  busy=true;
  const face=$("diceFace");face.classList.add("rolling");beep(280,.06,"square");
- let t=0;const spin=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(spin);die=1+Math.floor(Math.random()*6);face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);afterRoll();}},65);
+ let t=0;const spin=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(spin);die=forcedValue??(1+Math.floor(Math.random()*6));face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);if(multiplayer&&!fromRemote)sendGameAction({kind:"roll",value:die,turn});afterRoll();}},65);
 }
 function afterRoll(){
  const team=teams[turn];legal=legalFor(team,die);selectedToken=null;
- if(turn===0){
-   if(!legal.length){setHint("No legal move — turn passes.");$("diceInstruction").textContent="No legal move";addLog("🎲","You rolled <b>"+die+"</b> — no legal move.");updateUI();setTimeout(()=>finishTurn(die===6),850);return;}
+ if(!legal.length){const actor=multiplayer?(turn===multiplayer.mySide?"You":multiplayer.partner.username):(turn===0?"You":"Nexus");setHint("No legal move — turn passes.");$("diceInstruction").textContent="No legal move";addLog("🎲","<b>"+esc(actor)+"</b> rolled <b>"+die+"</b> — no legal move.");updateUI();setTimeout(()=>finishTurn(die===6),850);return;}
+ if(multiplayer?turn===multiplayer.mySide:turn===0){
    setHint(legal.length===1?"One token can move — tap it.":"Choose one of the glowing tokens.");
    $("diceInstruction").textContent=legal.length+" legal move"+(legal.length>1?"s":"")+" available";
    addLog("🎲","You rolled a <b>"+die+"</b>. Choose a glowing token.");
    updateUI();
+ }else if(multiplayer){
+   setHint("Waiting for "+multiplayer.partner.username+" to move…");$("diceInstruction").textContent=multiplayer.partner.username+" rolled "+die;updateUI();
  }else{
-   setHint("Nexus is choosing a move…");$("diceInstruction").textContent="Nexus rolled "+die;
-   if(!legal.length){addLog("🎲","Nexus rolled <b>"+die+"</b> — no legal move.");updateUI();setTimeout(()=>finishTurn(die===6),800);return;}
-   updateUI();setTimeout(robotMove,smart?650:400);
+   setHint("Nexus is choosing a move…");$("diceInstruction").textContent="Nexus rolled "+die;updateUI();setTimeout(robotMove,smart?650:400);
  }
 }
 function rankMove(team,tokenId,roll){
@@ -454,11 +463,13 @@ function robotMove(){
  doMove("yellow",id);
 }
 function chooseToken(teamId,id){
- if(gameOver||busy||die===null||turn!==0||teamId!=="red"||!legal.includes(id))return;
+ const localSide=multiplayer?multiplayer.mySide:0;
+ if(gameOver||busy||die===null||turn!==localSide||teamId!==(localSide===0?"red":"yellow")||!legal.includes(id))return;
  doMove(teamId,id);
 }
-function doMove(teamId,id){
+function doMove(teamId,id,fromRemote=false){
  if(gameOver||die===null)return;
+ if(multiplayer&&!fromRemote)sendGameAction({kind:"move",teamId,id,turn});
  const team=teams.find(t=>t.id===teamId),tok=team.tokens.find(t=>t.id===id),roll=die,old=tok.progress;
  tok.progress=old===-1?0:old+roll;
  let captured=0;
@@ -472,7 +483,7 @@ function doMove(teamId,id){
    }
  }
  totalMoves++;
- let message=teamId==="red"?"You":"Nexus";
+ let message=multiplayer?(teamId===(multiplayer.mySide===0?"red":"yellow")?"You":multiplayer.partner.username):(teamId==="red"?"You":"Nexus");
  let action=old===-1?"launched token "+(id+1):"moved token "+(id+1);
  if(tok.progress===57)action="brought token "+(id+1)+" home";
  if(captured)action+=" and captured "+captured+" token"+(captured>1?"s":"");
@@ -577,12 +588,13 @@ function renderSignedIn(){
 }
 function showLobbyRows(friends,incoming,outgoing){
  const row=(username,icon,detail,buttons="")=>'<div class="friend-row"><div class="friend-icon">'+lobbyEscape(icon||"👤")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state">'+lobbyEscape(detail)+'</div>'+buttons+'</div></div>';
- $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,f.avatar_emoji||"🟢","Friend · ready to invite")).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
+ $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,f.avatar_emoji||"🟢","Friend · ready to invite",'<button class="game-invite-btn" data-game-invite-friend="'+f.id+'">🎮 Invite to game</button>')).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
  $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,f.avatar_emoji||"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>')).join(""):'<div class="lobby-empty">No incoming requests.</div>';
  $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,f.avatar_emoji||"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting")).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
  $("lobbyFriendCount").textContent=friends.length+" FRIEND"+(friends.length===1?"":"S");
  $("lobbyInviteCount").textContent=(incoming.length+outgoing.filter(f=>f.status==="pending").length)+" PENDING";
  document.querySelectorAll("[data-invite-action]").forEach(btn=>btn.addEventListener("click",()=>respondToInvite(Number(btn.dataset.inviteId),btn.dataset.inviteAction)));
+ document.querySelectorAll("[data-game-invite-friend]").forEach(btn=>btn.addEventListener("click",()=>sendGameInvite(btn.dataset.gameInviteFriend)));
 }
 async function loadLobby(){
  if(!ludoSupabase||!ludoUser)return;
