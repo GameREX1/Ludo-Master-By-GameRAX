@@ -528,7 +528,7 @@ function newGame(){
  $("diceFace").textContent="—";$("diceFace").setAttribute("aria-label","Dice not rolled");$("winnerOverlay").classList.remove("show");
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
 }
-$("rollBtn").addEventListener("click",rollDice);
+$("rollBtn").addEventListener("click",()=>rollDice());
 $("newBtn").addEventListener("click",()=>{if(multiplayer){multiplayer.finished=false;sendGameAction({kind:"reset"});newGame();toast("Match restarted for both players.");}else{newGame();toast("New match ready — good luck!");}});
 $("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
 $("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
