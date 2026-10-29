@@ -493,7 +493,7 @@ function doMove(teamId,id,fromRemote=false){
  else {beep(500,.07);}
  die=null;legal=[];selectedToken=null;
  const winner=team.tokens.every(t=>t.progress===57);
- if(winner){gameOver=true;busy=false;updateUI();showWinner(teamId);return;}
+ if(winner){gameOver=true;busy=false;updateUI();showWinner(teamId);if(multiplayer&&!fromRemote)finishGameInvite();return;}
  updateUI();
  finishTurn(roll===6);
 }
@@ -521,7 +521,7 @@ function newGame(){
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
 }
 $("rollBtn").addEventListener("click",rollDice);
-$("newBtn").addEventListener("click",()=>{newGame();toast("New match ready — good luck!");});
+$("newBtn").addEventListener("click",()=>{if(multiplayer&&!multiplayer.finished){sendGameAction({kind:"reset"});newGame();toast("Match restarted for both players.");}else{newGame();toast("New match ready — good luck!");}});
 $("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
 $("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
 $("difficultyBtn").addEventListener("click",()=>{smart=!smart;$("difficultyBtn").textContent=smart?"SMART":"NORMAL";$("difficultyBtn").classList.toggle("on",smart);$("difficultyBtn").setAttribute("aria-pressed",String(smart));toast("Robot difficulty: "+(smart?"Smart":"Normal"));});
@@ -615,6 +615,7 @@ async function loadLobby(){
    else if(r.status==="pending"&&r.sender_id===ludoUser.id){outgoing.push({...other,id:other.id,inviteId:r.id,status:"pending"});}
   }
   showLobbyRows(friends,incoming,outgoing);
+  await loadGameInvites();
   lobbySetStatus("lobbyListStatus","");
  }catch(err){
   console.error("Ludo lobby load error:",err);
@@ -657,6 +658,104 @@ async function respondToInvite(requestId,action){
   lobbySetStatus("lobbyListStatus",action==="accept"?"Friend added successfully.":"Invitation declined.",action==="accept"?"ok":"");
   await loadLobby();
  }catch(err){lobbySetStatus("lobbyListStatus",err.message||"Could not update invitation.","error");}
+}
+async function sendGameInvite(targetId){
+ if(!ludoSupabase||!ludoUser||gameInviteBusy)return;
+ if(multiplayer&&!multiplayer.finished){toast("Finish or leave your current match first.");return;}
+ gameInviteBusy=true;lobbySetStatus("gameInviteStatus","Sending game invitation…");
+ try{
+  const {data:existing,error:lookupError}=await ludoSupabase.from("ludo_game_invites").select("id,status").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+ludoUser.id+")").in("status",["pending","accepted"]).limit(5);
+  if(lookupError)throw lookupError;
+  if((existing||[]).some(r=>r.status==="accepted"))throw new Error("You already have an active game invite with this friend.");
+  if((existing||[]).some(r=>r.status==="pending"))throw new Error("A game invite is already pending between you.");
+  const {error}=await ludoSupabase.from("ludo_game_invites").insert({sender_id:ludoUser.id,receiver_id:targetId,status:"pending"});
+  if(error)throw error;
+  lobbySetStatus("gameInviteStatus","🎮 Game invitation sent! Waiting for your friend to accept.","ok");
+  await loadGameInvites();
+ }catch(err){lobbySetStatus("gameInviteStatus",err.message||"Could not send game invitation.","error");}
+ finally{gameInviteBusy=false;}
+}
+async function respondToGameInvite(inviteId,action){
+ if(!ludoSupabase||!ludoUser)return;
+ lobbySetStatus("gameInviteStatus",action==="accept"?"Accepting game invite…":"Declining game invite…");
+ try{
+  const {error}=await ludoSupabase.from("ludo_game_invites").update({status:action==="accept"?"accepted":"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
+  if(error)throw error;
+  await loadLobby();
+  if(action==="accept")lobbySetStatus("gameInviteStatus","Accepted! Connecting you and your friend…","ok");
+  else lobbySetStatus("gameInviteStatus","Game invitation declined.");
+ }catch(err){lobbySetStatus("gameInviteStatus",err.message||"Could not respond to game invite.","error");}
+}
+function sendGameAction(action){
+ if(!multiplayer?.channel||!multiplayer.started)return;
+ multiplayer.channel.send({type:"broadcast",event:"game_action",payload:{...action,user_id:ludoUser.id}});
+}
+async function finishGameInvite(){
+ if(!multiplayer||!ludoSupabase)return;
+ multiplayer.finished=true;
+ try{await ludoSupabase.from("ludo_game_invites").update({status:"finished"}).eq("id",multiplayer.inviteId);}
+ catch(err){console.warn("Could not mark game invite finished",err);}
+}
+function enterOnlineMatch(invite,partner,mySide){
+ if(multiplayer&&multiplayer.inviteId===invite.id)return;
+ if(multiplayer?.channel)ludoSupabase.removeChannel(multiplayer.channel).catch(()=>{});
+ multiplayer={inviteId:invite.id,mySide,partner,channel:null,started:false,finished:false};
+ lobbySetStatus("gameInviteStatus","Connecting to @"+partner.username+"…");
+ const channel=ludoSupabase.channel("ludo-game-"+invite.id,{config:{broadcast:{self:false},presence:{key:ludoUser.id}}});
+ multiplayer.channel=channel;
+ channel.on("broadcast",{event:"game_action"},({payload})=>{
+  if(!payload||payload.user_id===ludoUser.id||!multiplayer||multiplayer.inviteId!==invite.id)return;
+  if(payload.kind==="roll"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die===null)rollDice(Number(payload.value),true);
+  else if(payload.kind==="move"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die!==null)doMove(payload.teamId,Number(payload.id),true);
+  else if(payload.kind==="reset"&&multiplayer.started)newGame();
+ });
+ channel.on("presence",{event:"sync"},()=>{
+  if(!multiplayer||multiplayer.inviteId!==invite.id)return;
+  const presence=channel.presenceState(),seen=Object.values(presence).flat().map(p=>p.user_id);
+  const both=[invite.sender_id,invite.receiver_id].every(id=>seen.includes(id));
+  if(both&&!multiplayer.started){
+   multiplayer.started=true;newGame();
+   $("gameInviteStatus").textContent="🟢 Online match connected with @"+partner.username+". Take turns rolling and moving your tokens.";
+   setHint(mySide===0?"Online match! You are Red. Roll the dice.":"Online match! You are Yellow. Roll the dice.");
+   updateUI();toast("Online match ready!");
+  }
+ });
+ channel.subscribe(async status=>{
+  if(status==="SUBSCRIBED"){
+   try{await channel.track({user_id:ludoUser.id,username:ludoProfile?.username||"Player",online_at:new Date().toISOString()});}
+   catch(err){lobbySetStatus("gameInviteStatus","Room presence failed: "+(err.message||err),"error");}
+  }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+   lobbySetStatus("gameInviteStatus","Could not connect to online match. Check Supabase Realtime and refresh.","error");
+  }
+ });
+}
+async function loadGameInvites(){
+ if(!ludoSupabase||!ludoUser)return;
+ try{
+  const {data:rows,error}=await ludoSupabase.from("ludo_game_invites").select("id,sender_id,receiver_id,status,created_at").or("sender_id.eq."+ludoUser.id+",receiver_id.eq."+ludoUser.id).order("created_at",{ascending:false}).limit(25);
+  if(error)throw error;
+  const relevant=(rows||[]).filter(r=>r.status==="pending"||r.status==="accepted");
+  const ids=[...new Set(relevant.map(r=>r.sender_id===ludoUser.id?r.receiver_id:r.sender_id))];
+  let profiles=[];
+  if(ids.length){const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);if(profileError)throw profileError;profiles=data||[];}
+  const byId=new Map(profiles.map(p=>[p.id,p]));
+  const incoming=relevant.filter(r=>r.status==="pending"&&r.receiver_id===ludoUser.id);
+  $("gameIncomingList").innerHTML=incoming.length?incoming.map(r=>{
+   const p=byId.get(r.sender_id);if(!p)return "";
+   return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">Invites you to play Ludo</div><div class="game-request-actions"><button class="accept" data-game-response="accept" data-game-id="'+r.id+'">ACCEPT & PLAY</button><button data-game-response="decline" data-game-id="'+r.id+'">DECLINE</button></div></div></div>';
+  }).filter(Boolean).join(""):'<div class="lobby-empty">No game invitations.</div>';
+  document.querySelectorAll("[data-game-response]").forEach(btn=>btn.addEventListener("click",()=>respondToGameInvite(btn.dataset.gameId,btn.dataset.gameResponse)));
+  const outgoing=relevant.find(r=>r.sender_id===ludoUser.id&&r.status==="pending");
+  if(outgoing)lobbySetStatus("gameInviteStatus","Waiting for your friend to accept your game invitation.");
+  const accepted=relevant.find(r=>r.status==="accepted");
+  if(accepted&&(!multiplayer||multiplayer.inviteId!==accepted.id)){
+   const partner=byId.get(accepted.sender_id===ludoUser.id?accepted.receiver_id:accepted.sender_id);
+   if(partner)enterOnlineMatch(accepted,partner,accepted.sender_id===ludoUser.id?0:1);
+  }
+ }catch(err){
+  console.error("Ludo game invites:",err);
+  lobbySetStatus("gameInviteStatus","Online invites need the latest supabase-setup.sql run in Supabase.","error");
+ }
 }
 async function onAuthFormSubmit(event){
  event.preventDefault();if(!ludoSupabase)return;
@@ -701,7 +800,7 @@ async function syncLobbyAuth(user){
   }
   renderSignedIn();await loadLobby();
   if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);
-  lobbyRefreshTimer=setInterval(()=>{if(ludoUser)loadLobby();},20000);
+  lobbyRefreshTimer=setInterval(()=>{if(ludoUser)loadLobby();},6000);
  }catch(err){
   console.error("Ludo profile error:",err);
   renderSignedIn();lobbySetStatus("lobbyAuthStatus","Account signed in, but Ludo profile is not ready. Run supabase-setup.sql in Supabase.","error");
