@@ -64,3 +64,42 @@ grant select, insert, update on public.ludo_profiles to authenticated;
 grant select, insert, update on public.ludo_friend_requests to authenticated;
 grant usage, select on sequence public.ludo_friend_requests_id_seq to authenticated;
 
+-- Online friend matches. Uses a UUID room id so the realtime channel name is not guessable.
+create table if not exists public.ludo_game_invites (
+  id uuid primary key default gen_random_uuid(),
+  sender_id uuid not null references public.ludo_profiles(id) on delete cascade,
+  receiver_id uuid not null references public.ludo_profiles(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending','accepted','declined','finished','cancelled')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint ludo_game_invite_no_self check (sender_id <> receiver_id)
+);
+
+create index if not exists ludo_game_invites_sender_idx on public.ludo_game_invites(sender_id, status, created_at desc);
+create index if not exists ludo_game_invites_receiver_idx on public.ludo_game_invites(receiver_id, status, created_at desc);
+alter table public.ludo_game_invites enable row level security;
+
+drop policy if exists "Players can view their own game invites" on public.ludo_game_invites;
+create policy "Players can view their own game invites"
+on public.ludo_game_invites for select to authenticated
+using (auth.uid() = sender_id or auth.uid() = receiver_id);
+
+drop policy if exists "Players can invite friends to games" on public.ludo_game_invites;
+create policy "Players can invite friends to games"
+on public.ludo_game_invites for insert to authenticated
+with check (auth.uid() = sender_id and sender_id <> receiver_id and status = 'pending');
+
+drop policy if exists "Invitees can respond to game invites" on public.ludo_game_invites;
+create policy "Invitees can respond to game invites"
+on public.ludo_game_invites for update to authenticated
+using (auth.uid() = receiver_id and status = 'pending')
+with check (auth.uid() = receiver_id and status in ('accepted','declined'));
+
+drop policy if exists "Players can finish their game invites" on public.ludo_game_invites;
+create policy "Players can finish their game invites"
+on public.ludo_game_invites for update to authenticated
+using ((auth.uid() = sender_id or auth.uid() = receiver_id) and status = 'accepted')
+with check ((auth.uid() = sender_id or auth.uid() = receiver_id) and status in ('accepted','finished','cancelled'));
+
+grant select, insert, update on public.ludo_game_invites to authenticated;
+
