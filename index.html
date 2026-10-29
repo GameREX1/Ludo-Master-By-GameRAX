@@ -622,7 +622,7 @@ async function onAuthFormSubmit(event){
  lobbySetStatus("authNote",authMode==="signup"?"Creating your account…":"Signing in…");
  try{
   if(authMode==="signup"){
-   const {data,error}=await ludoSupabase.auth.signUp({email,password,options:{data:{ludo_username:username}}});
+   const {data,error}=await ludoSupabase.auth.signUp({email,password,options:{emailRedirectTo:window.location.origin+window.location.pathname,data:{ludo_username:username}}});
    if(error)throw error;
    if(data.session){
     lobbySetStatus("authNote","Account created successfully!","ok");
