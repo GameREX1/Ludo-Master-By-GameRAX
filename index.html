@@ -512,7 +512,7 @@ function finishTurn(extra){
  updateUI();
  if(extra){setHint((turn===0?"You":"Nexus")+" rolled a six — extra turn!");toast((turn===0?"You":"Nexus")+" get another turn!");}
  else{setHint(turn===0?"Your turn — roll the dice.":"Nexus's turn.");}
- if(turn===1){setTimeout(rollDice,620);}
+ if(!multiplayer&&turn===1){setTimeout(()=>rollDice(null,true),620);}
 }
 function showWinner(teamId){
  const human=teamId==="red";
