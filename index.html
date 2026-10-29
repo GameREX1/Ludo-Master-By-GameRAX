@@ -122,6 +122,7 @@ footer a{color:var(--cyan);font-weight:900}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 /* =============== FRIENDS LOBBY / ACCOUNT UI =============== */
+.board-fullscreen{overflow:auto!important;background:#05070b!important;display:flex;flex-direction:column;justify-content:center;align-items:center;width:100vw;height:100vh;border-radius:0!important}.board-fullscreen .board-wrap{width:min(90vmin,900px);padding:8px;flex:1;min-height:0}.board-fullscreen #board{max-width:none;max-height:calc(100vh - 150px);width:auto;height:auto;max-width:90vw;max-height:calc(100vh - 170px)}.board-fullscreen .board-footer{width:100%;flex-direction:row;padding:8px 18px}.board-fullscreen .card-head{width:100%}
 .layout{grid-template-columns:245px minmax(0,1.25fr) minmax(280px,.72fr);gap:16px}
 .lobby{min-width:0;align-self:stretch}
 .lobby-section{padding:15px;border-bottom:1px solid #202b38}
@@ -646,6 +647,13 @@ async function syncLobbyAuth(user){
   const {data,error}=await ludoSupabase.from("ludo_profiles").select("id,username").eq("id",ludoUser.id).maybeSingle();
   if(error)throw error;
   ludoProfile=data;
+  if(!ludoProfile){
+   const desired=String(ludoUser.user_metadata?.ludo_username||ludoUser.email?.split("@")[0]||"player").toLowerCase().replace(/[^a-z0-9_]/g,"_").slice(0,20);
+   if(!/^[a-z0-9_]{3,20}$/.test(desired))throw new Error("Your username profile is missing. Please sign up again with a valid username or contact support.");
+   const {data:created,error:createError}=await ludoSupabase.from("ludo_profiles").insert({id:ludoUser.id,username:desired}).select("id,username").single();
+   if(createError)throw createError;
+   ludoProfile=created;
+  }
   renderSignedIn();await loadLobby();
   if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);
   lobbyRefreshTimer=setInterval(()=>{if(ludoUser)loadLobby();},20000);
@@ -675,6 +683,19 @@ $("lobbyLogoutBtn").addEventListener("click",async()=>{
  const {error}=await ludoSupabase.auth.signOut();
  if(error){lobbySetStatus("lobbyAuthStatus",error.message,"error");return;}
  ludoUser=null;ludoProfile=null;if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);renderSignedOut();lobbySetStatus("lobbyAuthStatus","You have been logged out.","ok");
+});
+const boardCard=document.querySelector("#board")?.closest(".card");
+$("boardFullscreenBtn")?.addEventListener("click",async()=>{
+ try{
+  if(!document.fullscreenElement){if(boardCard?.requestFullscreen)await boardCard.requestFullscreen();else toast("Fullscreen is not supported by this browser.");}
+  else await document.exitFullscreen();
+ }catch(err){toast("Fullscreen was blocked by the browser.");}
+});
+document.addEventListener("fullscreenchange",()=>{
+ const active=!!document.fullscreenElement;
+ const btn=$("boardFullscreenBtn");
+ if(btn)btn.textContent=active?"⤢ EXIT FULLSCREEN":"⛶ FULLSCREEN";
+ if(boardCard)boardCard.classList.toggle("board-fullscreen",active);
 });
 $("inviteForm").addEventListener("submit",sendFriendInvite);
 $("authForm").addEventListener("submit",onAuthFormSubmit);
