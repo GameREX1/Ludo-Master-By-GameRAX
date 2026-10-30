@@ -1061,7 +1061,25 @@ async function respondToGameInvite(inviteId,action){
  if(!ludoSupabase||!ludoUser)return;
  lobbySetStatus("gameInviteStatus",action==="accept"?"Accepting game invite…":"Declining game invite…");
  try{
-  const {error}=await ludoSupabase.from("ludo_game_invites").update({status:action==="accept"?"accepted":"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
+  if(action==="accept"){
+   const {data:invite,error:inviteError}=await ludoSupabase.from("ludo_game_invites")
+    .select("room_id").eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending").maybeSingle();
+   if(inviteError)throw inviteError;
+   if(invite?.room_id){
+    const {data:roomState,error:roomError}=await ludoSupabase.from("ludo_game_invites")
+     .select("room_started").eq("room_id",invite.room_id);
+    if(roomError)throw roomError;
+    if((roomState||[]).some(r=>r.room_started===true)){
+     const {error:declineError}=await ludoSupabase.from("ludo_game_invites")
+      .update({status:"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
+     if(declineError)throw declineError;
+     await loadLobby();
+     throw new Error("This room has already started. Ask the host to invite you to a new room.");
+    }
+   }
+  }
+  const {error}=await ludoSupabase.from("ludo_game_invites")
+   .update({status:action==="accept"?"accepted":"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
   if(error)throw error;
   await loadLobby();
   if(action==="accept")lobbySetStatus("gameInviteStatus","Accepted! Connecting you and your friend…","ok");
