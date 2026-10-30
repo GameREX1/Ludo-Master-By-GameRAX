@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#05070b;--panel:#0b1018;--panel2:#101722;--line:#222d3b;--cyan:#00d9ff;--muted:#8b99aa;--red:#ff5267;--green:#15d99a;--yellow:#ffd34e;--blue:#57a5ff}
+:root{--bg:#05070b;--panel:#0b1018;--panel2:#101722;--line:#222d3b;--cyan:#00d9ff;--muted:#8b99aa;--red:#F43F5E;--green:#10B981;--yellow:#FBBF24;--blue:#3B82F6}
 *{box-sizing:border-box}
 html{min-width:320px;background:var(--bg);scroll-behavior:smooth}
 body{margin:0;background:radial-gradient(ellipse at 50% -10%,#10212c 0,transparent 44%),var(--bg);color:#f4f7fb;font-family:Inter,system-ui,Arial,sans-serif;min-height:100vh}
@@ -474,8 +474,8 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
 (function(){
 "use strict";
 const $=id=>document.getElementById(id);
-const COLORS={red:"#ff5267",green:"#15d99a",yellow:"#ffd34e",blue:"#57a5ff"};
-const SOFT={red:"#ffdce1",green:"#d0ffed",yellow:"#fff4c8",blue:"#dcecff"};
+const COLORS={red:"#F43F5E",green:"#10B981",yellow:"#FBBF24",blue:"#3B82F6"};
+const SOFT={red:"#FFE4E9",green:"#D7FFF0",yellow:"#FFF4CF",blue:"#DEECFF"};
 const START={red:0,green:13,yellow:26,blue:39};
 const PATH=[[1,6],[2,6],[3,6],[4,6],[5,6],[6,5],[6,4],[6,3],[6,2],[6,1],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[9,6],[10,6],[11,6],[12,6],[13,6],[14,6],[14,7],[14,8],[13,8],[12,8],[11,8],[10,8],[9,8],[8,9],[8,10],[8,11],[8,12],[8,13],[8,14],[7,14],[6,14],[6,13],[6,12],[6,11],[6,10],[6,9],[5,8],[4,8],[3,8],[2,8],[1,8],[0,8],[0,7],[0,6]];
 const LANES={red:[[1,7],[2,7],[3,7],[4,7],[5,7]],green:[[7,1],[7,2],[7,3],[7,4],[7,5]],yellow:[[13,7],[12,7],[11,7],[10,7],[9,7]],blue:[[7,13],[7,12],[7,11],[7,10],[7,9]]};
@@ -619,28 +619,28 @@ async function returnHomeFromMatch(){
  const oldMatch=multiplayer;
  if(oldMatch){
   const roomId=oldMatch.inviteId;
-  const isHost=!!oldMatch.isRoom&&oldMatch.players?.[0]?.id===ludoUser?.id;
+  const playerCount=oldMatch.isRoom?Math.max(2,Number(oldMatch.players?.length||2)):2;
+  const roomStatus=playerCount===2?"finished":"cancelled";
   ignoredGameInviteIds.add(roomId);
   try{
    if(ludoSupabase&&ludoUser){
-    let q=ludoSupabase.from("ludo_game_invites").update({status:isHost?"finished":"cancelled"});
-    if(oldMatch.isRoom){
-     q=q.eq("room_id",roomId);
-     q=isHost?q.in("status",["pending","accepted"]):q.eq("receiver_id",ludoUser.id).eq("status","accepted");
-    }else{
-     q=q.eq("id",roomId).eq("status","accepted");
-    }
+    let q=ludoSupabase.from("ludo_game_invites")
+     .update({status:roomStatus,room_started:false})
+     .eq("room_id",roomId).in("status",["pending","accepted"]);
+    if(!oldMatch.isRoom)q=ludoSupabase.from("ludo_game_invites")
+     .update({status:"finished"}).eq("id",roomId).eq("status","accepted");
     const {error}=await q;
     if(error)throw error;
    }
   }catch(err){
    console.error("Could not save room departure:",err);
-   lobbySetStatus("gameInviteStatus","You left the match locally, but the room status could not be saved: "+(err.message||err),"error");
+   lobbySetStatus("gameInviteStatus","Room could not be closed in the database: "+(err.message||err),"error");
   }
   if(oldMatch.channel){
    try{
     await oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{
-     kind:isHost?"host_left":"leave",user_id:ludoUser?.id||null
+     kind:playerCount===2?"room_closed":"room_reset",
+     player_count:playerCount,user_id:ludoUser?.id||null
     }});
    }catch(err){console.warn("Could not notify the room:",err);}
    if(ludoSupabase)try{await ludoSupabase.removeChannel(oldMatch.channel);}catch(err){console.warn(err);}
@@ -665,21 +665,12 @@ async function leaveFriendRoom(){
   const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
    .select("sender_id,receiver_id,status").eq("room_id",roomId);
   if(readError)throw readError;
-  const hostId=room?.[0]?.sender_id;
-  if(hostId===ludoUser.id){
-   const {error}=await ludoSupabase.from("ludo_game_invites").update({status:"finished"})
-    .eq("room_id",roomId).in("status",["pending","accepted"]);
-   if(error)throw error;
-  }else{
-   const ownInvite=(room||[]).find(r=>r.receiver_id===ludoUser.id&&
-    (r.status==="pending"||r.status==="accepted"));
-   if(ownInvite){
-    const nextStatus=ownInvite.status==="pending"?"declined":"cancelled";
-    const {error}=await ludoSupabase.from("ludo_game_invites").update({status:nextStatus})
-     .eq("room_id",roomId).eq("receiver_id",ludoUser.id).eq("status",ownInvite.status);
-    if(error)throw error;
-   }
-  }
+  const playerCount=Math.max(2,1+(room||[]).length);
+  const roomStatus=playerCount===2?"finished":"cancelled";
+  const {error}=await ludoSupabase.from("ludo_game_invites")
+   .update({status:roomStatus,room_started:false})
+   .eq("room_id",roomId).in("status",["pending","accepted"]);
+  if(error)throw error;
  }catch(err){
   console.error("Could not leave Ludo room:",err);
   lobbySetStatus("gameInviteStatus","Room departure could not be saved: "+(err.message||err),"error");
@@ -838,7 +829,7 @@ const LUDO_SUPABASE_ANON_KEY="sb_publishable_Ud0bITW5Afyn7SfOV5Yu-w_9e4LpxhI";
 let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null,selectedProfileAvatar="🎮";
 let lobbyPresenceChannel=null,onlineUserIds=new Set(),lobbyRowsCache=null;
 const LUDO_AVATARS=["🎮","😎","🐱","🐼","🦊","🐸","🐯","🐉","👑","🚀","👾","🦄","⚽","🐺","🥷","🧙"];
-const LUDO_ROOM_COLORS=[{name:"RED",hex:"#ff657a",emoji:"🔴"},{name:"GREEN",hex:"#54d6a3",emoji:"🟢"},{name:"YELLOW",hex:"#f5cf62",emoji:"🟡"},{name:"BLUE",hex:"#63a8ff",emoji:"🔵"}];
+const LUDO_ROOM_COLORS=[{name:"RED",hex:"#F43F5E",emoji:"🔴"},{name:"GREEN",hex:"#10B981",emoji:"🟢"},{name:"YELLOW",hex:"#FBBF24",emoji:"🟡"},{name:"BLUE",hex:"#3B82F6",emoji:"🔵"}];
 const LUDO_SHOP_ITEMS=[
  {key:"banner_sunset",title:"Sunset Banner",desc:"A warm sunset cover for your player card.",art:"🌇",price:350,type:"banner"},
  {key:"banner_cyber",title:"Cyber Banner",desc:"Neon blue and violet profile cover.",art:"🌌",price:550,type:"banner"},
@@ -1177,24 +1168,18 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
   else if(payload.kind==="move"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die!==null)doMove(payload.teamId,Number(payload.id),true);
   else if(payload.kind==="reset"&&multiplayer.started){multiplayer.finished=false;newGame();}
   else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start another room match when ready.");}
-  else if(payload.kind==="host_left"&&multiplayer?.inviteId===roomId){
+  else if((payload.kind==="room_closed"||payload.kind==="room_reset")&&multiplayer?.inviteId===roomId){
    const departed=multiplayer;multiplayer=null;ignoredGameInviteIds.add(roomId);activeRoomId=null;
    if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
-   $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("homeDashboard").style.display="grid";updateModeUI();
-   lobbySetStatus("gameInviteStatus","The room host left. This room is now closed.","error");toast("Room closed by host.");
-  }
-  else if(payload.kind==="leave"&&multiplayer?.inviteId===roomId){
-   const departed=multiplayer;multiplayer=null;ignoredGameInviteIds.add(roomId);activeRoomId=roomId;
-   if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
-   $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("homeDashboard").style.display="none";updateModeUI();
-   setHint("A player left the room. Their seat is now marked LEFT ROOM.");lobbySetStatus("gameInviteStatus","A player left this room. You can see their seat status below.");toast("A player left the game.");
-   if(departed.players?.[0]?.id===ludoUser?.id&&ludoSupabase){
-    ludoSupabase.from("ludo_game_invites").update({room_started:false})
-     .eq("room_id",roomId).eq("status","accepted")
-     .then(({error})=>{if(error)console.warn("Could not reopen room lobby:",error);else loadGameInvites();})
-     .catch(err=>console.warn("Could not reopen room lobby:",err));
+   $("gameContent").style.display="none";$("modeSelector").style.display="none";
+   $("friendRoomPanel").style.display="none";$("homeDashboard").style.display="grid";updateModeUI();
+   if(payload.kind==="room_closed"){
+    lobbySetStatus("gameInviteStatus","This 2-player room is closed. Create a new room to play again.","error");
+    toast("Ludo room closed.");
+   }else{
+    lobbySetStatus("gameInviteStatus","This 3–4 player room has been reset. The host must invite everyone again.","error");
+    toast("Room reset — join again.");
    }
-   loadGameInvites();
   }
  });
  channel.on("presence",{event:"sync"},()=>{
@@ -1291,7 +1276,7 @@ async function loadGameInvites(){
    if(roomError)throw roomError;
    const room=roomRows||[];
    const hostId=room[0]?.sender_id||ludoUser.id;
-   if(room.some(r=>r.status==="finished")){
+   if(room.some(r=>r.status==="finished"||r.status==="cancelled")){
     ignoredGameInviteIds.add(displayRoomId);
     activeRoomId=null;
     if(multiplayer?.inviteId===displayRoomId){
@@ -1300,7 +1285,7 @@ async function loadGameInvites(){
     }
     $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
     $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
-    lobbySetStatus("gameInviteStatus","This Ludo room was closed by its host.","error");
+    lobbySetStatus("gameInviteStatus","This room has ended. Invite everyone again to create a fresh room.","error");
     return;
    }
    const latestBySeat=new Map();
@@ -1340,10 +1325,10 @@ async function loadGameInvites(){
    const isHost=hostId===ludoUser.id;
    playButton.style.display=(!roomStarted&&isHost&&joined>=2)?"inline-flex":"none";
    playButton.disabled=false;
-   if(roomStarted)playHint.textContent="This room has already started.";
-   else if(isHost&&joined>=2)playHint.textContent="Ready! Start now with "+joined+" players. Empty seats are not required.";
-   else if(isHost)playHint.textContent="Invite at least one friend. Play unlocks when 2 players are in the room.";
-   else if(joined>=2)playHint.textContent="Waiting for the room host to press Play.";
+   if(roomStarted)playHint.textContent="Match in progress. After leaving, create a new room to play again.";
+   else if(isHost&&joined>=2)playHint.textContent="Ready! PLAY NOW is available for "+joined+" players. Coins are not deducted.";
+   else if(isHost)playHint.textContent="Invite at least one friend. PLAY NOW unlocks when 2 players are in the room.";
+   else if(joined>=2)playHint.textContent="Waiting for the room host to press PLAY NOW.";
    else playHint.textContent="Waiting for one more player to join.";
    roomContext={roomId:displayRoomId,roomStarted,roster,hostId,joined};
   }
