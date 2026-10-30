@@ -354,6 +354,8 @@ const SAFE=new Set([0,8,13,21,26,34,39,47]);
 const BASES={red:[[1.7,1.7],[4.3,1.7],[1.7,4.3],[4.3,4.3]],green:[[10.7,1.7],[13.3,1.7],[10.7,4.3],[13.3,4.3]],yellow:[[10.7,10.7],[13.3,10.7],[10.7,13.3],[13.3,13.3]],blue:[[1.7,10.7],[4.3,10.7],[1.7,13.3],[4.3,13.3]]};
 let teams,turn=0,die=null,legal=[],busy=false,gameOver=false,smart=true,soundOn=true,turns=0,totalMoves=0,toastTimer,logItems=[];
 let multiplayer=null,gameInviteBusy=false,playMode="bot";
+const ignoredGameInviteIds=new Set();
+let diceSpinTimer=null;
 const svg=$("board");
 function makeTeams(){return [{id:"red",name:"You",start:0,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))},{id:"yellow",name:"Nexus",start:26,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}];}
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -441,7 +443,7 @@ function updateModeUI(){
  else if(multiplayer)hint.textContent="Connecting to your friend… keep this page open.";
  else hint.textContent=ludoUser?"Choose a friend from your Friends list and send a game invite. The match starts after they accept.":"Sign in, add a friend, then send a game invite from your lobby.";
 }
-function selectPlayMode(mode){
+async function selectPlayMode(mode){
  if(mode==="friends"){
   if(multiplayer&&!multiplayer.finished){
    playMode="friends";updateModeUI();updateUI();toast("You are in a live friend match.");return;
@@ -454,12 +456,28 @@ function selectPlayMode(mode){
   toast(ludoUser?"Choose a friend and send a game invite.":"Log in to invite a friend.");
   return;
  }
- if(multiplayer&&!multiplayer.finished){
-  toast("Finish your current friend match before switching to Bot.");
-  return;
+ const oldMatch=multiplayer;
+ if(oldMatch){
+  ignoredGameInviteIds.add(oldMatch.inviteId);
+  try{
+   if(oldMatch.channel)await oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{kind:"leave",user_id:ludoUser?.id||null}});
+  }catch(err){console.warn("Could not notify friend about leaving:",err);}
+  multiplayer=null;
+  if(ludoSupabase&&ludoUser){
+   try{
+    const {error}=await ludoSupabase.from("ludo_game_invites").update({status:"cancelled"}).eq("id",oldMatch.inviteId).eq("status","accepted");
+    if(error)console.warn("Could not close friend invite:",error);
+   }catch(err){console.warn("Could not close friend invite:",err);}
+  }
+  if(oldMatch.channel&&ludoSupabase){
+   try{await ludoSupabase.removeChannel(oldMatch.channel);}catch(err){console.warn("Could not leave friend room:",err);}
+  }
  }
- if(multiplayer?.channel&&ludoSupabase)ludoSupabase.removeChannel(multiplayer.channel).catch(err=>console.warn("Leaving finished Ludo room:",err));
- multiplayer=null;playMode="bot";newGame();updateModeUI();setHint("Your turn — roll the dice against Nexus.");toast("Play with Bot selected.");
+ playMode="bot";
+ newGame();
+ updateModeUI();
+ setHint("Your turn — roll the dice against Nexus.");
+ toast("Play with Bot selected.");
 }
 $("botModeBtn").addEventListener("click",()=>selectPlayMode("bot"));
 $("friendModeBtn").addEventListener("click",()=>selectPlayMode("friends"));
@@ -512,7 +530,7 @@ function rollDice(forcedValue=null,fromRemote=false){
  if(!multiplayer&&!fromRemote&&turn!==0)return;
  busy=true;updateUI();
  const face=$("diceFace");face.classList.add("rolling");beep(280,.06,"square");
- let t=0;const spin=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(spin);die=forcedValue??(1+Math.floor(Math.random()*6));face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);if(multiplayer&&!fromRemote)sendGameAction({kind:"roll",value:die,turn});afterRoll();}},65);
+ let t=0;diceSpinTimer=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(diceSpinTimer);diceSpinTimer=null;die=forcedValue??(1+Math.floor(Math.random()*6));face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);if(multiplayer&&!fromRemote)sendGameAction({kind:"roll",value:die,turn});afterRoll();}},65);
 }
 function afterRoll(){
  const team=teams[turn];legal=legalFor(team,die);selectedToken=null;
@@ -605,6 +623,8 @@ function showWinner(teamId){
  addLog(human?"🏆":"🤖","<b>"+(human?"You":"Nexus")+" won</b> the match!");
 }
 function newGame(){
+ if(diceSpinTimer){clearInterval(diceSpinTimer);diceSpinTimer=null;}
+ $("diceFace").classList.remove("rolling");
  teams=makeTeams();turn=0;die=null;legal=[];busy=false;gameOver=false;turns=0;totalMoves=0;selectedToken=null;logItems=[];
  $("diceFace").textContent="—";$("diceFace").setAttribute("aria-label","Dice not rolled");$("winnerOverlay").classList.remove("show");
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
@@ -834,6 +854,7 @@ async function finishGameInvite(){
  catch(err){console.warn("Could not mark game invite finished",err);}
 }
 function enterOnlineMatch(invite,partner,mySide){
+  if(ignoredGameInviteIds.has(invite.id))return;
   playMode="friends";updateModeUI();
  if(multiplayer&&multiplayer.inviteId===invite.id)return;
  if(multiplayer?.channel)ludoSupabase.removeChannel(multiplayer.channel).catch(()=>{});
@@ -847,6 +868,12 @@ function enterOnlineMatch(invite,partner,mySide){
   else if(payload.kind==="move"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die!==null)doMove(payload.teamId,Number(payload.id),true);
   else if(payload.kind==="reset"&&multiplayer.started){multiplayer.finished=false;newGame();}
   else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start a replay from New Game.");}
+  else if(payload.kind==="leave"&&multiplayer?.inviteId===invite.id){
+   const departed=multiplayer;multiplayer=null;playMode="friends";
+   if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(err=>console.warn("Could not close departed room:",err));
+   newGame();updateModeUI();setHint(partner.username+" left the match. Invite a friend to play again.");
+   lobbySetStatus("gameInviteStatus","Your friend left the match. You can invite them again.");toast(partner.username+" left the game.");
+  }
  });
  channel.on("presence",{event:"sync"},()=>{
   if(!multiplayer||multiplayer.inviteId!==invite.id)return;
@@ -873,7 +900,7 @@ async function loadGameInvites(){
  try{
   const {data:rows,error}=await ludoSupabase.from("ludo_game_invites").select("id,sender_id,receiver_id,status,created_at").or("sender_id.eq."+ludoUser.id+",receiver_id.eq."+ludoUser.id).order("created_at",{ascending:false}).limit(25);
   if(error)throw error;
-  const relevant=(rows||[]).filter(r=>r.status==="pending"||r.status==="accepted");
+  const relevant=(rows||[]).filter(r=>(r.status==="pending"||r.status==="accepted")&&!ignoredGameInviteIds.has(r.id));
   const ids=[...new Set(relevant.map(r=>r.sender_id===ludoUser.id?r.receiver_id:r.sender_id))];
   let profiles=[];
   if(ids.length){const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);if(profileError)throw profileError;profiles=data||[];}
