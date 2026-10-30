@@ -1319,7 +1319,7 @@ async function loadGameInvites(){
    const people=new Map((roomProfiles||[]).map(p=>[p.id,p]));
    const seats=[{id:hostId,seat:0,status:"host"},...seatRows.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))];
    const acceptedRows=activeRows.filter(r=>r.status==="accepted").sort((a,b)=>Number(a.seat)-Number(b.seat));
-   const roomStarted=room.some(r=>r.room_started===true);
+   const roomStarted=activeRows.some(r=>r.room_started===true);
    const rosterEntries=[{id:hostId,seat:0},...acceptedRows.map(r=>({id:r.receiver_id,seat:Number(r.seat)}))]
     .sort((a,b)=>a.seat-b.seat).filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i);
    const roster=rosterEntries.map((entry,index)=>{
