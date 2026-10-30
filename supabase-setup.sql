@@ -103,3 +103,77 @@ with check ((auth.uid() = sender_id or auth.uid() = receiver_id) and status in (
 
 grant select, insert, update on public.ludo_game_invites to authenticated;
 
+
+-- ================= LUDO V2: ROOMS, FREE COINS, COSMETICS =================
+alter table public.ludo_game_invites add column if not exists room_id uuid;
+alter table public.ludo_game_invites add column if not exists seat integer;
+create index if not exists ludo_game_invites_room_idx on public.ludo_game_invites(room_id,status,seat);
+
+create or replace function public.ludo_can_view_room_invites(p_room_id uuid)
+returns boolean language sql stable security definer set search_path=public
+as $$ select exists(select 1 from public.ludo_game_invites i where i.room_id=p_room_id and (i.sender_id=auth.uid() or i.receiver_id=auth.uid())) $$;
+revoke all on function public.ludo_can_view_room_invites(uuid) from public;
+grant execute on function public.ludo_can_view_room_invites(uuid) to authenticated;
+
+drop policy if exists "Players can view their own game invites" on public.ludo_game_invites;
+create policy "Players can view their own game invites"
+on public.ludo_game_invites for select to authenticated
+using (auth.uid()=sender_id or auth.uid()=receiver_id or public.ludo_can_view_room_invites(room_id));
+
+alter table public.ludo_profiles add column if not exists coins bigint not null default 1000 check(coins>=0);
+alter table public.ludo_profiles add column if not exists daily_reward_claimed_at timestamptz;
+alter table public.ludo_profiles add column if not exists banner_key text not null default 'aurora';
+alter table public.ludo_profiles add column if not exists frame_key text not null default 'basic';
+alter table public.ludo_profiles add column if not exists owned_items text[] not null default array['banner_aurora','frame_basic']::text[];
+
+revoke insert,update on public.ludo_profiles from authenticated;
+grant insert(id,username,avatar_emoji) on public.ludo_profiles to authenticated;
+grant update(username,avatar_emoji) on public.ludo_profiles to authenticated;
+
+create or replace function public.ludo_claim_daily_reward()
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare v_profile public.ludo_profiles%rowtype;
+begin
+ select * into v_profile from public.ludo_profiles where id=auth.uid() for update;
+ if not found then return jsonb_build_object('success',false,'message','Sign in to claim your daily reward.'); end if;
+ if v_profile.daily_reward_claimed_at is not null and v_profile.daily_reward_claimed_at>now()-interval '24 hours' then
+  return jsonb_build_object('success',false,'coins',v_profile.coins,'message','Your daily reward has already been claimed.');
+ end if;
+ update public.ludo_profiles set coins=coins+250,daily_reward_claimed_at=now() where id=auth.uid() returning * into v_profile;
+ return jsonb_build_object('success',true,'reward',250,'coins',v_profile.coins,'claimed_at',v_profile.daily_reward_claimed_at,'message','250 free coins added to your wallet.');
+end; $$;
+
+create or replace function public.ludo_buy_cosmetic(p_item_key text)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare v_cost integer;v_profile public.ludo_profiles%rowtype;
+begin
+ v_cost:=case p_item_key when 'banner_sunset' then 350 when 'banner_cyber' then 550 when 'frame_gold' then 450 when 'frame_flame' then 650 when 'emoji_pack' then 300 else null end;
+ if v_cost is null then return jsonb_build_object('success',false,'message','That shop item is not available.'); end if;
+ select * into v_profile from public.ludo_profiles where id=auth.uid() for update;
+ if not found then return jsonb_build_object('success',false,'message','Sign in to use the shop.'); end if;
+ if p_item_key=any(v_profile.owned_items) then return jsonb_build_object('success',false,'message','You already own this item.'); end if;
+ if v_profile.coins<v_cost then return jsonb_build_object('success',false,'message','Not enough coins. Claim your free daily reward.'); end if;
+ update public.ludo_profiles set coins=coins-v_cost,owned_items=array_append(owned_items,p_item_key) where id=auth.uid() returning * into v_profile;
+ return jsonb_build_object('success',true,'coins',v_profile.coins,'owned_items',v_profile.owned_items,'message','Item unlocked successfully.');
+end; $$;
+
+create or replace function public.ludo_equip_cosmetic(p_item_key text)
+returns jsonb language plpgsql security definer set search_path=public as $$
+declare v_profile public.ludo_profiles%rowtype;
+begin
+ select * into v_profile from public.ludo_profiles where id=auth.uid() for update;
+ if not found then return jsonb_build_object('success',false,'message','Sign in to customize your profile.'); end if;
+ if not(p_item_key=any(v_profile.owned_items)) then return jsonb_build_object('success',false,'message','Unlock this cosmetic from the shop first.'); end if;
+ if p_item_key like 'banner_%' then update public.ludo_profiles set banner_key=replace(p_item_key,'banner_','') where id=auth.uid();
+ elsif p_item_key like 'frame_%' then update public.ludo_profiles set frame_key=replace(p_item_key,'frame_','') where id=auth.uid();
+ else return jsonb_build_object('success',false,'message','This item unlocks reactions and does not need equipping.'); end if;
+ select * into v_profile from public.ludo_profiles where id=auth.uid();
+ return jsonb_build_object('success',true,'coins',v_profile.coins,'message','Cosmetic equipped successfully.');
+end; $$;
+
+revoke all on function public.ludo_claim_daily_reward() from public;
+revoke all on function public.ludo_buy_cosmetic(text) from public;
+revoke all on function public.ludo_equip_cosmetic(text) from public;
+grant execute on function public.ludo_claim_daily_reward() to authenticated;
+grant execute on function public.ludo_buy_cosmetic(text) to authenticated;
+grant execute on function public.ludo_equip_cosmetic(text) to authenticated;
