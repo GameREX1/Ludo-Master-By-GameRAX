@@ -615,23 +615,78 @@ $("friendModeBtn").addEventListener("click",()=>selectPlayMode("friends"));
 $("localPlayerCount").addEventListener("change",()=>{activeLocalPlayerCount=Number($("localPlayerCount").value||2);});
 $("challengeTier").addEventListener("change",()=>{robotChallenge=Number($("challengeTier").value||200);smart=robotChallenge>=1000;});
 
-function returnHomeFromMatch(){
+async function returnHomeFromMatch(){
  const oldMatch=multiplayer;
  if(oldMatch){
-  ignoredGameInviteIds.add(oldMatch.inviteId);
-  if(oldMatch.started)sendGameAction({kind:"leave"});
-  multiplayer=null;
-  if(oldMatch.channel&&ludoSupabase)ludoSupabase.removeChannel(oldMatch.channel).catch(err=>console.warn("Could not close Ludo room:",err));
-  if(ludoSupabase&&ludoUser){
-   let q=ludoSupabase.from("ludo_game_invites").update({status:"cancelled"});
-   q=oldMatch.isRoom?q.eq("room_id",oldMatch.inviteId):q.eq("id",oldMatch.inviteId);
-   q.eq("status","accepted").then(({error})=>{if(error)console.warn("Could not close Ludo room:",error);}).catch(err=>console.warn(err));
+  const roomId=oldMatch.inviteId;
+  const isHost=!!oldMatch.isRoom&&oldMatch.players?.[0]?.id===ludoUser?.id;
+  ignoredGameInviteIds.add(roomId);
+  try{
+   if(ludoSupabase&&ludoUser){
+    let q=ludoSupabase.from("ludo_game_invites").update({status:isHost?"finished":"cancelled"});
+    if(oldMatch.isRoom){
+     q=q.eq("room_id",roomId);
+     q=isHost?q.in("status",["pending","accepted"]):q.eq("receiver_id",ludoUser.id).eq("status","accepted");
+    }else{
+     q=q.eq("id",roomId).eq("status","accepted");
+    }
+    const {error}=await q;
+    if(error)throw error;
+   }
+  }catch(err){
+   console.error("Could not save room departure:",err);
+   lobbySetStatus("gameInviteStatus","You left the match locally, but the room status could not be saved: "+(err.message||err),"error");
   }
+  if(oldMatch.channel){
+   try{
+    await oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{
+     kind:isHost?"host_left":"leave",user_id:ludoUser?.id||null
+    }});
+   }catch(err){console.warn("Could not notify the room:",err);}
+   if(ludoSupabase)try{await ludoSupabase.removeChannel(oldMatch.channel);}catch(err){console.warn(err);}
+  }
+  multiplayer=null;
  }
  activeRoomId=null;playMode="bot";
  $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
  $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
  $("winnerOverlay").classList.remove("show");updateModeUI();
+}
+async function leaveFriendRoom(){
+ const roomId=activeRoomId;
+ if(!roomId||!ludoSupabase||!ludoUser){
+  activeRoomId=null;
+  $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
+  $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
+  return;
+ }
+ ignoredGameInviteIds.add(roomId);
+ try{
+  const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
+   .select("sender_id,receiver_id,status").eq("room_id",roomId);
+  if(readError)throw readError;
+  const hostId=room?.[0]?.sender_id;
+  if(hostId===ludoUser.id){
+   const {error}=await ludoSupabase.from("ludo_game_invites").update({status:"finished"})
+    .eq("room_id",roomId).in("status",["pending","accepted"]);
+   if(error)throw error;
+  }else{
+   const ownInvite=(room||[]).find(r=>r.receiver_id===ludoUser.id&&
+    (r.status==="pending"||r.status==="accepted"));
+   if(ownInvite){
+    const nextStatus=ownInvite.status==="pending"?"declined":"cancelled";
+    const {error}=await ludoSupabase.from("ludo_game_invites").update({status:nextStatus})
+     .eq("room_id",roomId).eq("receiver_id",ludoUser.id).eq("status",ownInvite.status);
+    if(error)throw error;
+   }
+  }
+ }catch(err){
+  console.error("Could not leave Ludo room:",err);
+  lobbySetStatus("gameInviteStatus","Room departure could not be saved: "+(err.message||err),"error");
+ }
+ activeRoomId=null;
+ $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
+ $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
 }
 function updateUI(){
  const playerHost=$("playersList");
@@ -1122,10 +1177,18 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
   else if(payload.kind==="move"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die!==null)doMove(payload.teamId,Number(payload.id),true);
   else if(payload.kind==="reset"&&multiplayer.started){multiplayer.finished=false;newGame();}
   else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start another room match when ready.");}
+  else if(payload.kind==="host_left"&&multiplayer?.inviteId===roomId){
+   const departed=multiplayer;multiplayer=null;ignoredGameInviteIds.add(roomId);activeRoomId=null;
+   if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
+   $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("homeDashboard").style.display="grid";updateModeUI();
+   lobbySetStatus("gameInviteStatus","The room host left. This room is now closed.","error");toast("Room closed by host.");
+  }
   else if(payload.kind==="leave"&&multiplayer?.inviteId===roomId){
-   const departed=multiplayer;multiplayer=null;if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
+   const departed=multiplayer;multiplayer=null;ignoredGameInviteIds.add(roomId);activeRoomId=roomId;
+   if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
    $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("homeDashboard").style.display="none";updateModeUI();
-   setHint("A player left the room. Return to the home screen to start again.");lobbySetStatus("gameInviteStatus","A player left this room. You can invite friends to a new room.");toast("A player left the game.");
+   setHint("A player left the room. Their seat is now marked LEFT ROOM.");lobbySetStatus("gameInviteStatus","A player left this room. You can see their seat status below.");toast("A player left the game.");
+   loadGameInvites();
   }
  });
  channel.on("presence",{event:"sync"},()=>{
@@ -1207,7 +1270,8 @@ async function loadGameInvites(){
   const ids=[...new Set(relevant.flatMap(r=>[r.sender_id,r.receiver_id]))];
   let profiles=[];
   if(ids.length){
-   const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);
+   const {data,error:profileError}=await ludoSupabase.from("ludo_profiles")
+    .select("id,username,avatar_emoji").in("id",ids);
    if(profileError)throw profileError;
    profiles=data||[];
   }
@@ -1215,21 +1279,39 @@ async function loadGameInvites(){
   const displayRoomId=activeRoomId||relevant.find(r=>r.room_id)?.room_id||null;
   let roomContext=null;
   if(displayRoomId){
-   activeRoomId=displayRoomId;
    const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites")
-    .select("id,sender_id,receiver_id,status,room_id,seat,room_started")
-    .eq("room_id",displayRoomId).order("seat",{ascending:true});
+    .select("id,sender_id,receiver_id,status,created_at,room_id,seat,room_started")
+    .eq("room_id",displayRoomId).order("created_at",{ascending:true});
    if(roomError)throw roomError;
    const room=roomRows||[];
    const hostId=room[0]?.sender_id||ludoUser.id;
-   const activeRows=room.filter(r=>r.status==="pending"||r.status==="accepted");
-   const roomIds=[hostId,...activeRows.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
+   if(room.some(r=>r.status==="finished")){
+    ignoredGameInviteIds.add(displayRoomId);
+    activeRoomId=null;
+    if(multiplayer?.inviteId===displayRoomId){
+     const old=multiplayer;multiplayer=null;
+     if(old.channel&&ludoSupabase)ludoSupabase.removeChannel(old.channel).catch(()=>{});
+    }
+    $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
+    $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
+    lobbySetStatus("gameInviteStatus","This Ludo room was closed by its host.","error");
+    return;
+   }
+   const latestBySeat=new Map();
+   for(const row of room){
+    const seat=Number(row.seat);
+    if(!Number.isInteger(seat)||seat<1||seat>3)continue;
+    const previous=latestBySeat.get(seat);
+    if(!previous||Date.parse(row.created_at||0)>=Date.parse(previous.created_at||0))latestBySeat.set(seat,row);
+   }
+   const seatRows=[...latestBySeat.values()].sort((a,b)=>Number(a.seat)-Number(b.seat));
+   const activeRows=seatRows.filter(r=>r.status==="pending"||r.status==="accepted");
+   const roomIds=[hostId,...seatRows.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
    const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles")
     .select("id,username,avatar_emoji").in("id",roomIds);
    if(rpError)throw rpError;
    const people=new Map((roomProfiles||[]).map(p=>[p.id,p]));
-   const seats=[{id:hostId,seat:0,status:"host"},...activeRows.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))]
-    .sort((a,b)=>a.seat-b.seat);
+   const seats=[{id:hostId,seat:0,status:"host"},...seatRows.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))];
    const acceptedRows=activeRows.filter(r=>r.status==="accepted").sort((a,b)=>Number(a.seat)-Number(b.seat));
    const roomStarted=room.some(r=>r.room_started===true);
    const rosterEntries=[{id:hostId,seat:0},...acceptedRows.map(r=>({id:r.receiver_id,seat:Number(r.seat)}))]
@@ -1245,7 +1327,7 @@ async function loadGameInvites(){
     const slot=seats[index],p=slot?people.get(slot.id):null,color=LUDO_ROOM_COLORS[index];
     const host=index===0,isJoined=host||slot?.status==="accepted";
     if(!slot)return '<div class="room-seat"><span class="seat-number">0'+(index+1)+'</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state"><i class="seat-color-dot" style="background:'+color.hex+';color:'+color.hex+'"></i>'+color.name+' · OPEN</span></div>';
-    const state=host?"HOST":isJoined?"JOINED":"INVITE SENT · WAITING";
+    const state=host?"HOST":slot.status==="cancelled"?"LEFT ROOM":slot.status==="declined"?"DECLINED":isJoined?"JOINED":"INVITE SENT · WAITING";
     return '<div class="room-seat '+(isJoined?"joined":"")+(host?" host":"")+'"><span class="seat-number">0'+(index+1)+'</span><span class="seat-avatar">'+lobbyEscape(p?.avatar_emoji||"🎮")+'</span><span class="seat-name">'+lobbyEscape(p?.username||"Player")+(host?" · HOST":"")+'</span><span class="seat-state"><i class="seat-color-dot" style="background:'+color.hex+';color:'+color.hex+'"></i>'+state+' · '+color.name+'</span></div>';
    }).join("");
    const playButton=$("friendRoomPlayBtn"),playHint=$("friendRoomPlayHint");
@@ -1383,7 +1465,7 @@ async function saveProfile(event){
 }
 $("profileCustomizeBtn").addEventListener("click",openProfileEditor);
 $("homePlayBtn").addEventListener("click",()=>{$("homeDashboard").style.display="none";$("modeSelector").style.display="flex";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
-$("friendRoomHomeBtn").addEventListener("click",()=>{$("homeDashboard").style.display="grid";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
+$("friendRoomHomeBtn").addEventListener("click",leaveFriendRoom);
 $("friendRoomPlayBtn").addEventListener("click",startFriendRoomMatch);
 $("homeShopBtn").addEventListener("click",openShop);$("homeProfileBtn").addEventListener("click",openProfileEditor);
 $("dailyRewardBtn").addEventListener("click",claimDailyReward);$("shopCloseBtn").addEventListener("click",closeShop);
