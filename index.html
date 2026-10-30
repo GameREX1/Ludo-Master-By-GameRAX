@@ -1188,6 +1188,12 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
    if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
    $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("homeDashboard").style.display="none";updateModeUI();
    setHint("A player left the room. Their seat is now marked LEFT ROOM.");lobbySetStatus("gameInviteStatus","A player left this room. You can see their seat status below.");toast("A player left the game.");
+   if(departed.players?.[0]?.id===ludoUser?.id&&ludoSupabase){
+    ludoSupabase.from("ludo_game_invites").update({room_started:false})
+     .eq("room_id",roomId).eq("status","accepted")
+     .then(({error})=>{if(error)console.warn("Could not reopen room lobby:",error);else loadGameInvites();})
+     .catch(err=>console.warn("Could not reopen room lobby:",err));
+   }
    loadGameInvites();
   }
  });
