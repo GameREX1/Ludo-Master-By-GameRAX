@@ -459,18 +459,17 @@ async function selectPlayMode(mode){
  const oldMatch=multiplayer;
  if(oldMatch){
   ignoredGameInviteIds.add(oldMatch.inviteId);
-  try{
-   if(oldMatch.channel)await oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{kind:"leave",user_id:ludoUser?.id||null}});
-  }catch(err){console.warn("Could not notify friend about leaving:",err);}
+  const leaveNotice=oldMatch.channel
+   ?oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{kind:"leave",user_id:ludoUser?.id||null}}).catch(err=>console.warn("Could not notify friend about leaving:",err))
+   :Promise.resolve();
   multiplayer=null;
-  if(ludoSupabase&&ludoUser){
-   try{
-    const {error}=await ludoSupabase.from("ludo_game_invites").update({status:"cancelled"}).eq("id",oldMatch.inviteId).eq("status","accepted");
-    if(error)console.warn("Could not close friend invite:",error);
-   }catch(err){console.warn("Could not close friend invite:",err);}
-  }
   if(oldMatch.channel&&ludoSupabase){
-   try{await ludoSupabase.removeChannel(oldMatch.channel);}catch(err){console.warn("Could not leave friend room:",err);}
+   leaveNotice.finally(()=>ludoSupabase.removeChannel(oldMatch.channel).catch(err=>console.warn("Could not leave friend room:",err)));
+  }
+  if(ludoSupabase&&ludoUser){
+   ludoSupabase.from("ludo_game_invites").update({status:"cancelled"}).eq("id",oldMatch.inviteId).eq("status","accepted")
+    .then(({error})=>{if(error)console.warn("Could not close friend invite:",error);})
+    .catch(err=>console.warn("Could not close friend invite:",err));
   }
  }
  playMode="bot";
