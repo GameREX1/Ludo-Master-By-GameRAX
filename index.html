@@ -287,7 +287,23 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
 .lobby-avatar[data-frame="gold"]{outline:3px solid #f3ca68;outline-offset:2px}
 .lobby-avatar[data-frame="flame"]{outline:3px solid #fa7859;outline-offset:2px}
 .player .avatar{border-radius:15px}
-@media(max-width:760px){.home-grid,.shop-grid{grid-template-columns:1fr}.home-hero-row{align-items:flex-start}.bot-setup{margin-left:0}.emoji-toolbar{align-items:flex-start}.home-play{width:100%}}
+
+.friend-room-panel{padding:clamp(17px,3vw,27px);border:1px solid #55478a;border-radius:21px;background:radial-gradient(circle at 85% 0%,#755ac044,transparent 36%),linear-gradient(145deg,#1b1b3a,#0d1226);box-shadow:0 22px 65px #0005}
+.friend-room-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+.friend-room-head h2{font-size:clamp(22px,3vw,30px);letter-spacing:-1px;margin:7px 0}
+.friend-room-head p{font-size:11px;color:#acb1ce;line-height:1.6;max-width:520px;margin:0}
+.friend-room-meta{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;margin-top:19px;border:1px solid #3e3967;border-radius:12px;background:#10142a;color:#aeb4d2;font-size:9px;font-weight:900;letter-spacing:.8px}
+.friend-room-meta b{color:#ffe18a}
+.friend-room-slots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:13px}
+.room-seat{display:grid;grid-template-columns:38px 42px minmax(0,1fr);grid-template-rows:auto auto;align-items:center;column-gap:10px;padding:13px;border:1px dashed #454365;border-radius:14px;background:#11152b;min-width:0}
+.room-seat.host{border-style:solid;border-color:#8b70d0;background:linear-gradient(120deg,#25204a,#111a32)}
+.seat-number{grid-row:1/3;color:#8984ad;font-size:10px;font-weight:900}
+.seat-avatar{grid-row:1/3;width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:#242344;font-size:22px}
+.seat-name{font-size:10px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.seat-state{font-size:8px;letter-spacing:.5px;color:#8f9ab8;margin-top:4px}
+.room-seat.joined .seat-state{color:#6ce6ae}
+.room-tip{margin-top:14px;padding:12px;border-radius:11px;background:#11182a;color:#aeb7d0;font-size:10px;line-height:1.6}
+@media(max-width:760px){.home-grid,.shop-grid,.friend-room-slots{grid-template-columns:1fr}.home-hero-row{align-items:flex-start}.bot-setup{margin-left:0}.emoji-toolbar{align-items:flex-start}.home-play{width:100%}.friend-room-head{flex-direction:column}}
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -359,6 +375,21 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
         <div class="mode-buttons"><button class="mode-btn active" type="button" id="botModeBtn" aria-pressed="true">🤖 PLAY WITH ROBOTS</button><button class="mode-btn" type="button" id="friendModeBtn" aria-pressed="false">👥 PLAY WITH FRIENDS</button></div>
         <div class="bot-setup" id="botSetup"><label>PLAYERS <select id="localPlayerCount"><option value="2">2 TOTAL</option><option value="3">3 TOTAL</option><option value="4">4 TOTAL</option></select></label><label>ROBOT CHALLENGE <select id="challengeTier"><option value="200">200 · STARTER</option><option value="500">500 · EASY</option><option value="1000">1,000 · NORMAL</option><option value="5000">5,000 · SKILLED</option><option value="10000">10,000 · ADVANCED</option><option value="50000">50,000 · EXPERT</option><option value="100000">100,000 · MASTER</option><option value="500000">500,000 · LEGEND</option><option value="1000000">1,000,000 · NEXUS PRO</option></select></label></div>
       </div>
+
+      <section class="friend-room-panel" id="friendRoomPanel" style="display:none">
+        <div class="friend-room-head">
+          <div><div class="home-kicker">◆ PRIVATE MATCH ROOM</div><h2>Friends Lobby</h2><p>Invite up to three friends from your sidebar. The match begins when all invited players have joined.</p></div>
+          <button class="home-secondary" id="friendRoomHomeBtn" type="button">← HOME</button>
+        </div>
+        <div class="friend-room-meta"><span>ROOM <b id="friendRoomCode">WAITING FOR INVITES</b></span><span id="friendRoomStatus">1 / 4 PLAYERS</span></div>
+        <div class="friend-room-slots" id="friendRoomSlots">
+          <div class="room-seat host"><span class="seat-number">01</span><span class="seat-avatar">🎮</span><span class="seat-name">YOU · HOST</span><span class="seat-state">ROOM OWNER</span></div>
+          <div class="room-seat"><span class="seat-number">02</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>
+          <div class="room-seat"><span class="seat-number">03</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>
+          <div class="room-seat"><span class="seat-number">04</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>
+        </div>
+        <div class="room-tip">💡 Your friends appear in the sidebar. Tap <b>INVITE TO GAME</b> beside each friend to fill these seats.</div>
+      </section>
       <div class="game-content" id="gameContent" style="display:none">
     <section class="card board-card" id="boardCard">
       <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><div style="display:flex;align-items:center;gap:7px"><button class="fullscreen-btn" type="button" id="boardFullscreenBtn" title="Toggle fullscreen">⛶ FULLSCREEN</button><span class="board-label" id="boardPlayerCount">2 PLAYERS</span></div></div>
@@ -545,7 +576,7 @@ async function selectPlayMode(mode){
  if(mode==="friends"){
   if(multiplayer&&!multiplayer.finished){playMode="friends";updateModeUI();updateUI();toast("You are already in a live friend room.");return;}
   multiplayer=null;activeRoomId=null;playMode="friends";
-  $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("gameContent").style.display="none";
+  $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("gameContent").style.display="none";
   updateModeUI();setHint("Invite 1–3 friends from your Friends list. The match starts when the room is ready.");
   lobbySetStatus("gameInviteStatus","Create a room by inviting a friend. You can invite up to three friends into the same room.","ok");
   toast(ludoUser?"Invite 1–3 friends to your Ludo room.":"Log in to invite friends.");return;
@@ -559,7 +590,7 @@ async function selectPlayMode(mode){
   if(ludoSupabase&&ludoUser){let q=ludoSupabase.from("ludo_game_invites").update({status:"cancelled"});q=oldMatch.isRoom?q.eq("room_id",oldMatch.inviteId):q.eq("id",oldMatch.inviteId);q.eq("status","accepted").then(({error})=>{if(error)console.warn(error);}).catch(console.warn);}
  }
  playMode="bot";activeLocalPlayerCount=Number($("localPlayerCount")?.value||2);robotChallenge=Number($("challengeTier")?.value||200);smart=robotChallenge>=1000;
- $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("gameContent").style.display="grid";
+ $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="grid";
  newGame();updateModeUI();setHint("Your turn — roll the dice against "+(activeLocalPlayerCount-1)+" Nexus robot"+(activeLocalPlayerCount>2?"s":"")+".");
  toast("Robot match ready · "+activeLocalPlayerCount+" players.");
 }
@@ -1014,7 +1045,7 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
  if(multiplayer?.channel&&ludoSupabase)ludoSupabase.removeChannel(multiplayer.channel).catch(()=>{});
  const ordered=roster.slice().sort((a,b)=>a.seat-b.seat);
  multiplayer={inviteId:roomId,mySide:me.seat,players:ordered,partner:ordered.find(p=>p.id!==userId)||null,channel:null,started:false,finished:false,isRoom:!!isRoom};
- playMode="friends";$("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("gameContent").style.display="grid";updateModeUI();
+ playMode="friends";$("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="grid";updateModeUI();
  lobbySetStatus("gameInviteStatus","Connecting "+ordered.length+" room player"+(ordered.length===1?"":"s")+"…");
  const channel=ludoSupabase.channel("ludo-game-"+roomId,{config:{broadcast:{self:false},presence:{key:userId}}});multiplayer.channel=channel;
  channel.on("broadcast",{event:"game_action"},({payload})=>{
@@ -1026,7 +1057,7 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
   else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start another room match when ready.");}
   else if(payload.kind==="leave"&&multiplayer?.inviteId===roomId){
    const departed=multiplayer;multiplayer=null;if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
-   $("gameContent").style.display="none";$("modeSelector").style.display="none";$("homeDashboard").style.display="grid";updateModeUI();
+   $("gameContent").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("homeDashboard").style.display="none";updateModeUI();
    setHint("A player left the room. Return to the home screen to start again.");lobbySetStatus("gameInviteStatus","A player left this room. You can invite friends to a new room.");toast("A player left the game.");
   }
  });
@@ -1063,6 +1094,28 @@ async function loadGameInvites(){
   const ids=[...new Set(relevant.flatMap(r=>[r.sender_id,r.receiver_id]))];let profiles=[];
   if(ids.length){const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);if(profileError)throw profileError;profiles=data||[];}
   const byId=new Map(profiles.map(p=>[p.id,p]));
+  const displayRoomId=activeRoomId||relevant.find(r=>r.room_id)?.room_id||null;
+  if(displayRoomId){
+   activeRoomId=displayRoomId;
+   const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("sender_id,receiver_id,status,room_id,seat").eq("room_id",displayRoomId).order("seat",{ascending:true});
+   if(roomError)throw roomError;
+   const room=roomRows||[],hostId=room[0]?.sender_id||ludoUser.id;
+   const roomIds=[hostId,...room.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
+   const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",roomIds);
+   if(rpError)throw rpError;
+   const people=new Map((roomProfiles||[]).map(p=>[p.id,p]));
+   const seats=[{id:hostId,seat:0,status:"host"},...room.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))];
+   const occupied=new Set(seats.map(s=>s.seat));
+   $("friendRoomCode").textContent=displayRoomId.slice(0,8).toUpperCase();
+   const joined=seats.filter(s=>s.status==="host"||s.status==="accepted").length;
+   $("friendRoomStatus").textContent=joined+" / 4 PLAYERS CONNECTED";
+   $("friendRoomSlots").innerHTML=[0,1,2,3].map(seat=>{
+    const slot=seats.find(s=>s.seat===seat),p=slot?people.get(slot.id):null;
+    const host=seat===0,isJoined=host||slot?.status==="accepted";
+    if(!slot)return '<div class="room-seat"><span class="seat-number">0'+(seat+1)+'</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>';
+    return '<div class="room-seat '+(isJoined?"joined":"")+(host?" host":"")+'"><span class="seat-number">0'+(seat+1)+'</span><span class="seat-avatar">'+lobbyEscape(p?.avatar_emoji||"🎮")+'</span><span class="seat-name">'+lobbyEscape(p?.username||"Player")+(host?" · HOST":"")+'</span><span class="seat-state">'+(host?"ROOM OWNER":isJoined?"✓ JOINED":"INVITE SENT · WAITING")+'</span></div>';
+   }).join("");
+  }
   const incoming=relevant.filter(r=>r.status==="pending"&&r.receiver_id===ludoUser.id);
   $("gameIncomingList").innerHTML=incoming.length?incoming.map(r=>{
    const p=byId.get(r.sender_id);if(!p)return "";
@@ -1072,6 +1125,7 @@ async function loadGameInvites(){
   const accepted=relevant.find(r=>r.status==="accepted");
   if(accepted){
    if(accepted.room_id){
+    $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("gameContent").style.display="none";
     const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("id,sender_id,receiver_id,status,room_id,seat").eq("room_id",accepted.room_id).order("seat",{ascending:true});
     if(roomError)throw roomError;
     const inviteRows=roomRows||[],pending=inviteRows.some(r=>r.status==="pending"),joined=inviteRows.filter(r=>r.status==="accepted");
@@ -1185,7 +1239,8 @@ async function saveProfile(event){
  finally{$("profileSaveBtn").disabled=false;$("profileSaveBtn").textContent="SAVE PROFILE";}
 }
 $("profileCustomizeBtn").addEventListener("click",openProfileEditor);
-$("homePlayBtn").addEventListener("click",()=>{$("homeDashboard").style.display="none";$("modeSelector").style.display="flex";$("gameContent").style.display="none";});
+$("homePlayBtn").addEventListener("click",()=>{$("homeDashboard").style.display="none";$("modeSelector").style.display="flex";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
+$("friendRoomHomeBtn").addEventListener("click",()=>{$("homeDashboard").style.display="grid";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
 $("homeShopBtn").addEventListener("click",openShop);$("homeProfileBtn").addEventListener("click",openProfileEditor);
 $("dailyRewardBtn").addEventListener("click",claimDailyReward);$("shopCloseBtn").addEventListener("click",closeShop);
 $("shopOverlay").addEventListener("click",e=>{if(e.target===$("shopOverlay"))closeShop();});
@@ -1215,7 +1270,7 @@ document.addEventListener("fullscreenchange",()=>{
  if(btn)btn.textContent=active?"⤢ EXIT FULLSCREEN":"⛶ FULLSCREEN";
  if(gameArea)gameArea.classList.toggle("game-fullscreen",active);
 });
-$("inviteForm").addEventListener("submit",sendFriendInvite);$("inviteForm").addEventListener("submit",sendFriendInvite);
+$("inviteForm").addEventListener("submit",sendFriendInvite);
 $("authForm").addEventListener("submit",onAuthFormSubmit);
 renderEmojiOptions();refreshHomeWallet();
 $("authCloseBtn").addEventListener("click",closeAuth);
