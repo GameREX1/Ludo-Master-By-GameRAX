@@ -47,7 +47,7 @@ h1 .highlight{background:linear-gradient(100deg,#fff 0%,#00d9ff 60%,#83f0ff 100%
 .card-title{font-weight:900;font-size:14px;letter-spacing:.1px}
 .card-sub{font-size:10px;color:var(--muted);margin-top:4px}
 .board-label{font-size:10px;font-weight:900;color:#7f91a3;letter-spacing:1.3px;border:1px solid #2a3746;border-radius:7px;padding:6px 8px}
-.board-wrap{padding:clamp(10px,2.6vw,25px);display:flex;justify-content:center;align-items:center;position:relative;background:radial-gradient(ellipse at center,#10202b66,transparent 65%)}
+.board-wrap{padding:clamp(10px,2.6vw,25px);display:flex;justify-content:center;align-items:center;position:relative;background:radial-gradient(ellipse at center,#164c7b88,transparent 68%),repeating-linear-gradient(45deg,#102b4388 0 12px,#0b1d3088 12px 24px)}
 #board{display:block;width:100%;max-width:670px;height:auto;aspect-ratio:1;border-radius:9px;filter:drop-shadow(0 12px 25px #0008);touch-action:manipulation}
 #board .token{cursor:pointer;transition:opacity .2s}
 #board .token:focus{outline:none}
@@ -490,7 +490,7 @@ const svg=$("board");
 function makeTeams(){
  const colors=["red","green","yellow","blue"];
  if(multiplayer?.players?.length){
-  return multiplayer.players.slice().sort((a,b)=>a.seat-b.seat).map((p,index)=>({id:colors[index],name:p.id===ludoUser?.id?"You":p.username||"Friend "+(index+1),avatar_emoji:p.avatar_emoji||"🎮",controller:"human",userId:p.id,start:START[colors[index]],tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}));
+  return multiplayer.players.slice().sort((a,b)=>a.seat-b.seat).map((p,index)=>({id:colors[index],name:p.username||(p.id===ludoUser?.id?ludoProfile?.username:"")||"Friend "+(index+1),avatar_emoji:p.avatar_emoji||"🎮",controller:"human",userId:p.id,start:START[colors[index]],tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}));
  }
  if(multiplayer){
   const members=[{id:ludoUser?.id,username:ludoProfile?.username||"You",avatar_emoji:ludoProfile?.avatar_emoji||"🎮"},{id:multiplayer.partner?.id,username:multiplayer.partner?.username||"Friend",avatar_emoji:multiplayer.partner?.avatar_emoji||"🎮"}];
@@ -518,11 +518,16 @@ function drawBoard(){
  s+=polygon([[9,9],[6,9],[7.5,7.5]],COLORS.yellow);
  s+=polygon([[6,9],[6,6],[7.5,7.5]],COLORS.blue);
  s+='<circle cx="300" cy="300" r="18" fill="#0a111a" stroke="#ffffff" stroke-width="2"/><text x="300" y="304" text-anchor="middle" font-size="10" font-weight="900" fill="#ffffff">HOME</text>';
- // Subtle labels in home bases.
- s+='<text x="120" y="119" text-anchor="middle" font-size="17" font-weight="900" fill="#d82f48" opacity=".42">YOU</text>';
- s+='<text x="480" y="119" text-anchor="middle" font-size="17" font-weight="900" fill="#b28700" opacity=".65">NEXUS AI</text>';
- s+='<text x="120" y="479" text-anchor="middle" font-size="13" font-weight="900" fill="#3478c9" opacity=".6">BLUE LANE</text>';
- s+='<text x="480" y="479" text-anchor="middle" font-size="13" font-weight="900" fill="#168a65" opacity=".6">GREEN LANE</text>';
+ // Player names and seat colors are shown in the same four home zones as the reference layout.
+ const boardSeats=[{id:"red",x:120,y:37},{id:"green",x:480,y:37},{id:"blue",x:120,y:576},{id:"yellow",x:480,y:576}];
+ boardSeats.forEach(seat=>{
+  const player=teams.find(t=>t.id===seat.id);
+  const label=player?String(player.name||"PLAYER").toUpperCase().slice(0,14):"OPEN SEAT";
+  const fill=player?COLORS[seat.id]:"#637487";
+  s+='<g><rect x="'+(seat.x-103)+'" y="'+(seat.y-20)+'" width="206" height="27" rx="7" fill="#071321" fill-opacity=".48" stroke="'+fill+'" stroke-opacity=".65" stroke-width="1.2"/>';
+  s+='<circle cx="'+(seat.x-87)+'" cy="'+(seat.y-7)+'" r="5" fill="'+fill+'"/>';
+  s+='<text x="'+(seat.x+5)+'" y="'+(seat.y-3)+'" text-anchor="middle" font-size="13" font-weight="900" letter-spacing=".5" fill="#ffffff">'+esc(label)+'</text></g>';
+ });
  // Base circles are drawn before movable pieces.
  for(const c of ["red","green","yellow","blue"]){
    BASES[c].forEach(pos=>{let cx=pos[0]*40,cy=pos[1]*40;s+=circle(cx,cy,16,"#ffffff",COLORS[c],3);s+=circle(cx,cy,10,SOFT[c],"#ffffff",1);});
@@ -544,9 +549,11 @@ function drawBoard(){
    let stroke=isLegal?"#ffffff":"#17202a",sw=isLegal?3:2;
    s+='<g class="token '+(isLegal?"clickable":"")+'" data-team="'+t.id+'" data-token="'+tok.id+'" tabindex="'+(isLegal?0:-1)+'" role="button" aria-label="'+t.name+' token '+(tok.id+1)+(isLegal?", legal move":"")+'" opacity="'+(isLegal?1:0.96)+'">';
    if(isLegal)s+=circle(cx,cy,18,"none","#ffffff",2.5,'stroke-dasharray="3 3" filter="url(#tokenGlow)"');
-   s+=circle(cx,cy,14,COLORS[t.id],stroke,sw,'filter="url(#tokenGlow)"');
-   s+=circle(cx-3,cy-4,4,"#ffffff","none",0,'opacity=".85"');
-   s+='<text x="'+cx+'" y="'+(cy+4)+'" text-anchor="middle" font-size="11" font-weight="900" fill="'+(t.id==="yellow"?"#493700":"#ffffff")+'">'+(tok.id+1)+'</text>';
+   s+='<ellipse cx="'+cx+'" cy="'+(cy+12)+'" rx="10" ry="3.5" fill="#07111c" opacity=".36"/>';
+   s+='<path d="M '+(cx-6)+' '+(cy-4)+' C '+(cx-6)+' '+(cy-1)+' '+(cx-11)+' '+(cy+2)+' '+(cx-10)+' '+(cy+8)+' C '+(cx-9)+' '+(cy+14)+' '+(cx+9)+' '+(cy+14)+' '+(cx+10)+' '+(cy+8)+' C '+(cx+11)+' '+(cy+2)+' '+(cx+6)+' '+(cy-1)+' '+(cx+6)+' '+(cy-4)+' Z" fill="'+COLORS[t.id]+'" stroke="'+stroke+'" stroke-width="'+sw+'" filter="url(#tokenGlow)"/>';
+   s+=circle(cx,cy-8,6,COLORS[t.id],stroke,sw,'filter="url(#tokenGlow)"');
+   s+=circle(cx-2,cy-10,2.2,"#ffffff","none",0,'opacity=".75"');
+   s+='<text x="'+cx+'" y="'+(cy+8)+'" text-anchor="middle" font-size="7" font-weight="900" fill="'+(t.id==="yellow"?"#493700":"#ffffff")+'">'+(tok.id+1)+'</text>';
    s+='</g>';
  }));
  svg.innerHTML=s;
@@ -632,7 +639,7 @@ function updateUI(){
   const isYou=multiplayer?index===multiplayer.mySide:index===0;
   const avatar=isYou?(ludoProfile?.avatar_emoji||"🧑‍🚀"):(team.avatar_emoji||(team.controller==="bot"?"🤖":"🎮"));
   const label=isYou?"YOU":team.controller==="bot"?"ROBOT AI":"FRIEND";
-  const name=isYou?"YOU":team.name.toUpperCase();
+  const name=isYou?String(team.name||ludoProfile?.username||"YOU").toUpperCase():team.name.toUpperCase();
   const count=team.tokens.filter(t=>t.progress===57).length;
   return '<div class="player '+(turn===index&&!gameOver?"active":"")+'"><div class="avatar '+team.id+'">'+lobbyEscapeSafe(avatar)+'</div><div class="playerinfo"><div class="playername">'+lobbyEscapeSafe(name)+' <span class="playerlabel">'+label+'</span></div><div class="playerdesc">'+team.id.toUpperCase()+' squad · Player '+(index+1)+'</div></div><div class="token-count">'+count+' / 4<small>home tokens</small></div></div>';
  }).join("");}
@@ -1104,7 +1111,9 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
  const ordered=roster.slice().sort((a,b)=>a.seat-b.seat);
  multiplayer={inviteId:roomId,mySide:me.seat,players:ordered,partner:ordered.find(p=>p.id!==userId)||null,channel:null,started:false,finished:false,isRoom:!!isRoom};
  playMode="friends";$("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="grid";updateModeUI();
- lobbySetStatus("gameInviteStatus","Connecting "+ordered.length+" room player"+(ordered.length===1?"":"s")+"…");
+ lobbySetStatus("gameInviteStatus","Room board is ready. Connecting "+ordered.length+" players…");
+ newGame();
+ setHint("Board ready · waiting for all room players to connect.");
  const channel=ludoSupabase.channel("ludo-game-"+roomId,{config:{broadcast:{self:false},presence:{key:userId}}});multiplayer.channel=channel;
  channel.on("broadcast",{event:"game_action"},({payload})=>{
   if(!payload||payload.user_id===ludoUser.id||!multiplayer||multiplayer.inviteId!==roomId)return;
@@ -1124,7 +1133,7 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
   const presence=channel.presenceState(),seen=Object.values(presence).flat().map(p=>p.user_id);
   if(ordered.every(p=>seen.includes(p.id))&&!multiplayer.started){
    multiplayer.started=true;newGame();$("gameInviteStatus").textContent="🟢 Room ready · "+ordered.length+" players connected. Seat "+(multiplayer.mySide+1)+" is yours.";
-   setHint(multiplayer.mySide===0?"Room match started! You are Red. Roll the dice.":"Room match started! Your turn will appear in seat order.");updateUI();toast("Ludo room ready · "+ordered.length+" players!");
+   setHint("Room match started! Your color is "+(teams[multiplayer.mySide]?.id||"red").toUpperCase()+". Roll when your turn arrives.");updateUI();toast("Ludo room ready · "+ordered.length+" players!");
   }
  });
  channel.subscribe(async status=>{
@@ -1172,9 +1181,10 @@ async function startFriendRoomMatch(){
    const profile=people.get(entry.id);
    return {id:entry.id,username:profile?.username||(entry.id===ludoUser.id?"You":"Player"),avatar_emoji:profile?.avatar_emoji||"🎮",seat:index};
   });
-  const {error:startError}=await ludoSupabase.from("ludo_game_invites")
-   .update({room_started:true}).eq("room_id",activeRoomId).eq("status","accepted");
+  const {data:startData,error:startError}=await ludoSupabase.from("ludo_game_invites")
+   .update({room_started:true}).eq("room_id",activeRoomId).eq("status","accepted").select("id");
   if(startError)throw startError;
+  if(!startData||!startData.length)throw new Error("The room start status was not saved. Please refresh and try again.");
   const roomId=activeRoomId;
   lobbySetStatus("gameInviteStatus","Room started with "+roster.length+" players. Connecting everyone…","ok");
   enterOnlineMatchGroup(roomId,roster,ludoUser.id,true);
