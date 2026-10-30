@@ -118,14 +118,35 @@ footer a{color:var(--cyan);font-weight:900}
 .winner-emoji{font-size:54px}
 .winner-box h2{font-size:25px;letter-spacing:-.7px;margin:14px 0 8px}
 .winner-box p{font-size:12px;line-height:1.7;color:#a0afbd;margin:0 0 22px}
-@media(max-width:1000px){.layout{grid-template-columns:minmax(0,1fr) 310px}.hero{align-items:flex-start}.hero-badge{display:none}}
+@media(max-width:1000px){.hero{align-items:flex-start}.hero-badge{display:none}}
 @media(max-width:760px){.topbar{height:66px}.topright .pill{display:none}main{padding-top:20px}.layout{grid-template-columns:1fr}.rightcol{display:grid;grid-template-columns:1fr}.board-wrap{padding:10px}.card-head{padding:14px}.board-footer{padding:0 13px 14px;align-items:flex-start;flex-direction:column}#hint{text-align:left}.rules{grid-template-columns:1fr 1fr}.rules .rule:last-child{grid-column:1/-1}.hero{margin-top:4px}.hero p{font-size:12px}.brand img{width:37px;height:37px}.brand-name{font-size:15px}}
 @media(max-width:420px){.brand-sub{font-size:8px;letter-spacing:1.3px}.brand-name{font-size:13px}.topbar{padding:0 10px}.link-btn{padding:10px;font-size:10px}.rules{grid-template-columns:1fr}.rules .rule:last-child{grid-column:auto}.dice-face{width:70px;height:70px;font-size:38px}.hero h1{letter-spacing:-1.3px}.player{padding:10px}.token-count{font-size:10px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;transition-duration:.01ms!important}}
 
 /* =============== FRIENDS LOBBY / ACCOUNT UI =============== */
-.board-fullscreen{overflow:auto!important;background:#05070b!important;display:flex;flex-direction:column;justify-content:center;align-items:center;width:100vw;height:100vh;border-radius:0!important}.board-fullscreen .board-wrap{width:min(90vmin,900px);padding:8px;flex:1;min-height:0}.board-fullscreen #board{max-width:none;max-height:calc(100vh - 150px);width:auto;height:auto;max-width:90vw;max-height:calc(100vh - 170px)}.board-fullscreen .board-footer{width:100%;flex-direction:row;padding:8px 18px}.board-fullscreen .card-head{width:100%}
-.layout{grid-template-columns:245px minmax(0,1.25fr) minmax(280px,.72fr);gap:16px}
+
+.layout{grid-template-columns:245px minmax(0,1fr);gap:16px}
+.game-area{display:flex;flex-direction:column;gap:12px;min-width:0}
+.game-content{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(280px,.72fr);gap:16px;align-items:start;min-width:0}
+.mode-selector{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 16px;border:1px solid #243444;border-radius:16px;background:linear-gradient(120deg,#101c28,#0a111a);min-width:0}
+.mode-title{font-size:11px;font-weight:900;letter-spacing:1.1px;color:#e9f3fb}
+.mode-note{font-size:10px;color:#91a2b3;margin-top:4px;line-height:1.5}
+.mode-buttons{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.mode-btn{border:1px solid #344657;border-radius:10px;padding:10px 13px;background:#111b26;color:#c5d1dc;font-size:10px;font-weight:900;cursor:pointer;transition:.18s}
+.mode-btn:hover{border-color:var(--cyan);color:#fff}
+.mode-btn.active{background:linear-gradient(110deg,#00d9ff,#67eaff);border-color:#00d9ff;color:#041119;box-shadow:0 6px 20px #00d9ff20}
+.game-fullscreen{width:100vw!important;height:100vh!important;max-height:100vh!important;overflow:auto!important;padding:12px!important;border-radius:0!important;background:#05070b!important;box-sizing:border-box!important}
+.game-fullscreen .game-content{grid-template-columns:minmax(0,1fr) minmax(300px,.43fr);height:calc(100vh - 74px);min-height:0;align-items:stretch}
+.game-fullscreen .board-card{height:100%;min-height:0;display:flex;flex-direction:column}
+.game-fullscreen .board-card .board-wrap{flex:1;min-height:0;overflow:hidden;padding:8px}
+.game-fullscreen .board-card #board{width:auto;height:auto;max-width:100%;max-height:calc(100vh - 190px);aspect-ratio:1}
+.game-fullscreen .board-card .board-footer{flex-shrink:0}
+.game-fullscreen .rightcol{max-height:calc(100vh - 74px);min-height:0;overflow-y:auto;overscroll-behavior:contain;padding-right:3px}
+.game-fullscreen .player{padding:10px}
+.game-fullscreen .avatar{width:46px;height:46px}
+@media(max-width:1000px){.game-content{grid-template-columns:minmax(0,1fr) 280px}}
+@media(max-width:760px){.game-content{grid-template-columns:1fr}.mode-selector{align-items:flex-start;flex-direction:column}.mode-buttons{width:100%;display:grid;grid-template-columns:1fr 1fr}.mode-btn{padding:10px 7px;font-size:9px}.game-fullscreen{overflow:auto!important}.game-fullscreen .game-content{height:auto;display:grid;grid-template-columns:1fr}.game-fullscreen .board-card{height:auto;min-height:0}.game-fullscreen .board-card .board-wrap{flex:none}.game-fullscreen .board-card #board{width:100%;height:auto;max-height:none}.game-fullscreen .rightcol{max-height:none;overflow:visible;display:grid;grid-template-columns:1fr}.game-fullscreen .dice-card{order:0}}
+
 .lobby{min-width:0;align-self:stretch}
 .lobby-section{padding:15px;border-bottom:1px solid #202b38}
 .lobby-section:last-child{border-bottom:0}
@@ -249,7 +270,13 @@ footer a{color:var(--cyan);font-weight:900}
       </div>
     </aside>
 
-    <section class="card">
+    <div class="game-area" id="gameArea">
+      <div class="mode-selector" role="group" aria-label="Choose how to play">
+        <div><div class="mode-title">CHOOSE YOUR GAME MODE</div><div class="mode-note" id="modeHint">Play against Nexus or invite a friend to a live match.</div></div>
+        <div class="mode-buttons"><button class="mode-btn active" type="button" id="botModeBtn" aria-pressed="true">🤖 PLAY WITH BOT</button><button class="mode-btn" type="button" id="friendModeBtn" aria-pressed="false">👥 PLAY WITH FRIENDS</button></div>
+      </div>
+      <div class="game-content" id="gameContent">
+    <section class="card board-card" id="boardCard">
       <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><div style="display:flex;align-items:center;gap:7px"><button class="fullscreen-btn" type="button" id="boardFullscreenBtn" title="Toggle fullscreen">⛶ FULLSCREEN</button><span class="board-label">2 PLAYERS</span></div></div>
       <div class="board-wrap"><svg id="board" viewBox="0 0 600 600" role="img" aria-label="Interactive Ludo board"></svg></div>
       <div class="board-footer"><div class="legend"><span><i style="background:var(--red)"></i>You · Red</span><span><i style="background:var(--yellow)"></i>Nexus · Yellow</span><span><i style="background:var(--green)"></i>Green lane</span><span><i style="background:var(--blue)"></i>Blue lane</span></div><div id="hint" aria-live="polite">Your turn — roll the dice.</div></div>
@@ -271,6 +298,8 @@ footer a{color:var(--cyan);font-weight:900}
       </section>
       <section class="card log-card"><div class="log-head"><h2>RECENT MOVES</h2><span id="moveCount">0 moves</span></div><div id="moveLog"><div class="log-item"><div class="log-icon">🎲</div><div>Match ready. <b>Roll to start.</b></div></div></div></section>
     </aside>
+      </div>
+    </div>
   </div></main>
 <footer><img src="https://cdn.corenexis.com/f/i2qQMduvFbC.png" alt="GameRAX">A free game made for the <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">GameRAX</a> universe · <span id="year"></span> · Play more games at <a href="https://gamerax.online/" target="_blank" rel="noopener noreferrer">gamerax.online</a></footer>
 
@@ -324,7 +353,7 @@ const LANES={red:[[1,7],[2,7],[3,7],[4,7],[5,7]],green:[[7,1],[7,2],[7,3],[7,4],
 const SAFE=new Set([0,8,13,21,26,34,39,47]);
 const BASES={red:[[1.7,1.7],[4.3,1.7],[1.7,4.3],[4.3,4.3]],green:[[10.7,1.7],[13.3,1.7],[10.7,4.3],[13.3,4.3]],yellow:[[10.7,10.7],[13.3,10.7],[10.7,13.3],[13.3,13.3]],blue:[[1.7,10.7],[4.3,10.7],[1.7,13.3],[4.3,13.3]]};
 let teams,turn=0,die=null,legal=[],busy=false,gameOver=false,smart=true,soundOn=true,turns=0,totalMoves=0,toastTimer,logItems=[];
-let multiplayer=null,gameInviteBusy=false;
+let multiplayer=null,gameInviteBusy=false,playMode="bot";
 const svg=$("board");
 function makeTeams(){return [{id:"red",name:"You",start:0,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))},{id:"yellow",name:"Nexus",start:26,tokens:Array.from({length:4},(_,i)=>({id:i,progress:-1}))}];}
 function esc(v){return String(v).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
@@ -400,38 +429,84 @@ function toast(msg){const el=$("toast");el.textContent=msg;el.classList.add("sho
 let audioCtx=null;
 function beep(freq=440,duration=.08,type="sine"){if(!soundOn)return;try{audioCtx=audioCtx||new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=.045;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,audioCtx.currentTime+duration);o.stop(audioCtx.currentTime+duration);}catch(e){}}
 function setHint(text){$("hint").textContent=text;}
-function updateUI(){
- $("player-red").classList.toggle("active",turn===0&&!gameOver);
- $("player-yellow").classList.toggle("active",turn===1&&!gameOver);
- if(multiplayer){
-  const redName=multiplayer.mySide===0?"YOU":multiplayer.partner.username.toUpperCase();
-  const yellowName=multiplayer.mySide===1?"YOU":multiplayer.partner.username.toUpperCase();
-  $("player-red").querySelector(".playername").innerHTML=esc(redName)+' <span class="playerlabel">'+(multiplayer.mySide===0?"YOU":"FRIEND")+"</span>";
-  $("player-yellow").querySelector(".playername").innerHTML=esc(yellowName)+' <span class="playerlabel">'+(multiplayer.mySide===1?"YOU":"FRIEND")+"</span>";
-  $("player-red").querySelector(".playerdesc").textContent=multiplayer.mySide===0?"Red squad · You":"Red squad · "+multiplayer.partner.username;
-  $("player-yellow").querySelector(".playerdesc").textContent=multiplayer.mySide===1?"Yellow squad · You":"Yellow squad · "+multiplayer.partner.username;
+function updateModeUI(){
+ $("botModeBtn").classList.toggle("active",playMode==="bot");
+ $("friendModeBtn").classList.toggle("active",playMode==="friends");
+ $("botModeBtn").setAttribute("aria-pressed",String(playMode==="bot"));
+ $("friendModeBtn").setAttribute("aria-pressed",String(playMode==="friends"));
+ const hint=$("modeHint");
+ if(!hint)return;
+ if(playMode==="bot")hint.textContent="You are playing solo against Nexus AI.";
+ else if(multiplayer?.started)hint.textContent="Live match connected with @"+multiplayer.partner.username+".";
+ else if(multiplayer)hint.textContent="Connecting to your friend… keep this page open.";
+ else hint.textContent=ludoUser?"Choose a friend from your Friends list and send a game invite. The match starts after they accept.":"Sign in, add a friend, then send a game invite from your lobby.";
+}
+function selectPlayMode(mode){
+ if(mode==="friends"){
+  if(multiplayer&&!multiplayer.finished){
+   playMode="friends";updateModeUI();updateUI();toast("You are in a live friend match.");return;
+  }
+  if(multiplayer?.channel&&ludoSupabase)ludoSupabase.removeChannel(multiplayer.channel).catch(err=>console.warn("Leaving old Ludo room:",err));
+  multiplayer=null;playMode="friends";
+  if(turns||totalMoves||gameOver)newGame();else updateUI();
+  updateModeUI();setHint("Invite a friend from your lobby to start an online match.");
+  if(ludoUser)loadGameInvites().catch(err=>console.warn("Could not check friend matches:",err));
+  toast(ludoUser?"Choose a friend and send a game invite.":"Log in to invite a friend.");
+  return;
  }
- $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
- $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
- $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
- const localTurn=multiplayer?multiplayer.started&&turn===multiplayer.mySide:turn===0;
- const canRoll=localTurn&&!busy&&!gameOver&&die===null;
- $("rollBtn").disabled=!canRoll;
- $("rollBtn").textContent=gameOver?"MATCH COMPLETE":busy?"ROLLING…":die!==null&&localTurn?"CHOOSE A GLOWING TOKEN":multiplayer&&!multiplayer.started?"CONNECTING TO FRIEND…":multiplayer&&!localTurn?"WAITING FOR FRIEND…":!multiplayer&&turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
- $("diceFace").classList.toggle("is-disabled",!canRoll);
- $("diceFace").setAttribute("aria-disabled",String(!canRoll));
- $("diceFace").setAttribute("aria-label",canRoll?"Roll the dice":busy?"Dice is rolling":gameOver?"Match finished":multiplayer&&!multiplayer.started?"Waiting for friend to connect":die!==null?"Dice shows "+die:"Wait for your turn");
- $("newBtn").disabled=busy&&!gameOver;
- $("diceInstruction").textContent=gameOver?"Match finished":busy&&die===null?"Dice is rolling…":localTurn?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):multiplayer?"Your friend is playing…":"Nexus is calculating…";
- $("diceHelp").textContent=busy&&die===null?"Please wait while the dice rolls.":die===null?"Click the dice or the ROLL DICE button. A 6 launches a token and earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
- $("difficultyBtn").textContent=smart?"SMART":"NORMAL";
- $("difficultyBtn").classList.toggle("on",smart);
- $("difficultyBtn").setAttribute("aria-pressed",String(smart));
- $("soundBtn").textContent=(soundOn?"🔊 Sound: on":"🔇 Sound: off");
- drawBoard();
+ if(multiplayer&&!multiplayer.finished){
+  toast("Finish your current friend match before switching to Bot.");
+  return;
+ }
+ if(multiplayer?.channel&&ludoSupabase)ludoSupabase.removeChannel(multiplayer.channel).catch(err=>console.warn("Leaving finished Ludo room:",err));
+ multiplayer=null;playMode="bot";newGame();updateModeUI();setHint("Your turn — roll the dice against Nexus.");toast("Play with Bot selected.");
+}
+$("botModeBtn").addEventListener("click",()=>selectPlayMode("bot"));
+$("friendModeBtn").addEventListener("click",()=>selectPlayMode("friends"));
+function updateUI(){
+  const redAvatar=$("player-red").querySelector(".avatar");
+  const yellowAvatar=$("player-yellow").querySelector(".avatar");
+  redAvatar.textContent=multiplayer?(multiplayer.mySide===0?(ludoProfile?.avatar_emoji||"🧑‍🚀"):(multiplayer.partner.avatar_emoji||"🎮")):(ludoProfile?.avatar_emoji||"🧑‍🚀");
+  yellowAvatar.textContent=multiplayer?(multiplayer.mySide===1?(ludoProfile?.avatar_emoji||"🧑‍🚀"):(multiplayer.partner.avatar_emoji||"🎮")):"🤖";
+  if(multiplayer){
+   const redName=multiplayer.mySide===0?"YOU":multiplayer.partner.username.toUpperCase();
+   const yellowName=multiplayer.mySide===1?"YOU":multiplayer.partner.username.toUpperCase();
+   $("player-red").querySelector(".playername").innerHTML=esc(redName)+' <span class="playerlabel">'+(multiplayer.mySide===0?"YOU":"FRIEND")+"</span>";
+   $("player-yellow").querySelector(".playername").innerHTML=esc(yellowName)+' <span class="playerlabel">'+(multiplayer.mySide===1?"YOU":"FRIEND")+"</span>";
+   $("player-red").querySelector(".playerdesc").textContent=multiplayer.mySide===0?"Red squad · You":"Red squad · "+multiplayer.partner.username;
+   $("player-yellow").querySelector(".playerdesc").textContent=multiplayer.mySide===1?"Yellow squad · You":"Yellow squad · "+multiplayer.partner.username;
+  }else{
+   $("player-red").querySelector(".playername").innerHTML='YOU <span class="playerlabel">YOU</span>';
+   $("player-yellow").querySelector(".playername").innerHTML='NEXUS <span class="playerlabel">ROBOT AI</span>';
+   $("player-red").querySelector(".playerdesc").textContent="Red squad · You";
+   $("player-yellow").querySelector(".playerdesc").textContent="Yellow squad · Player 2";
+  }
+  $("player-red").classList.toggle("active",turn===0&&!gameOver);
+  $("player-yellow").classList.toggle("active",turn===1&&!gameOver);
+  $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
+  $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
+  $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
+  const friendModeWaiting=playMode==="friends"&&!multiplayer;
+  const localTurn=multiplayer?multiplayer.started&&turn===multiplayer.mySide:playMode==="bot"&&turn===0;
+  const canRoll=localTurn&&!busy&&!gameOver&&die===null;
+  $("rollBtn").disabled=!canRoll;
+  $("rollBtn").textContent=gameOver?"MATCH COMPLETE":busy?"ROLLING…":friendModeWaiting?"INVITE A FRIEND TO PLAY":die!==null&&localTurn?"CHOOSE A GLOWING TOKEN":multiplayer&&!multiplayer.started?"CONNECTING TO FRIEND…":multiplayer&&!localTurn?"WAITING FOR FRIEND…":!multiplayer&&turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
+  $("diceFace").classList.toggle("is-disabled",!canRoll);
+  $("diceFace").setAttribute("aria-disabled",String(!canRoll));
+  $("diceFace").setAttribute("aria-label",canRoll?"Roll the dice":busy?"Dice is rolling":friendModeWaiting?"Invite a friend to play":gameOver?"Match finished":multiplayer&&!multiplayer.started?"Waiting for friend to connect":die!==null?"Dice shows "+die:"Wait for your turn");
+  $("newBtn").disabled=busy&&!gameOver;
+  $("diceInstruction").textContent=friendModeWaiting?"Waiting for a friend":gameOver?"Match finished":busy&&die===null?"Dice is rolling…":localTurn?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):multiplayer?"Your friend is playing…":"Nexus is calculating…";
+  $("diceHelp").textContent=friendModeWaiting?"Open your Friends list, choose a friend and send a game invite.":busy&&die===null?"Please wait while the dice rolls.":die===null?"Click the dice or the ROLL DICE button. A 6 launches a token and earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
+  $("difficultyBtn").textContent=smart?"SMART":"NORMAL";
+  $("difficultyBtn").classList.toggle("on",smart);
+  $("difficultyBtn").setAttribute("aria-pressed",String(smart));
+  $("soundBtn").textContent=(soundOn?"🔊 Sound: on":"🔇 Sound: off");
+  drawBoard();
+  updateModeUI();
 }
 function rollDice(forcedValue=null,fromRemote=false){
  if(busy||die!==null||gameOver)return;
+ if(!multiplayer&&playMode!=="bot")return;
  if(multiplayer&&!multiplayer.started&&!fromRemote)return;
  if(multiplayer&&!fromRemote&&turn!==multiplayer.mySide)return;
  if(!multiplayer&&!fromRemote&&turn!==0)return;
@@ -471,13 +546,13 @@ function rankMove(team,tokenId,roll){
  return score+Math.random()*2;
 }
 function robotMove(){
- if(gameOver||turn!==1||die===null)return;
+ if(playMode!=="bot"||multiplayer||gameOver||turn!==1||die===null)return;
  const id=legal.slice().sort((a,b)=>rankMove(teams[1],b,die)-rankMove(teams[1],a,die))[0];
  doMove("yellow",id);
 }
 function chooseToken(teamId,id){
  const localSide=multiplayer?multiplayer.mySide:0;
- if(gameOver||busy||die===null||turn!==localSide||teamId!==(localSide===0?"red":"yellow")||!legal.includes(id))return;
+ if(gameOver||busy||die===null||(!multiplayer&&playMode!=="bot")||turn!==localSide||teamId!==(localSide===0?"red":"yellow")||!legal.includes(id))return;
  doMove(teamId,id);
 }
 function doMove(teamId,id,fromRemote=false){
@@ -515,9 +590,10 @@ function finishTurn(extra){
  die=null;legal=[];selectedToken=null;busy=false;
  if(!extra){turn=1-turn;}
  updateUI();
- if(extra){setHint((turn===0?"You":"Nexus")+" rolled a six — extra turn!");toast((turn===0?"You":"Nexus")+" get another turn!");}
+ if(extra){setHint((turn===0?"You":multiplayer?multiplayer.partner.username:"Nexus")+" rolled a six — extra turn!");toast((turn===0?"You":multiplayer?multiplayer.partner.username:"Nexus")+" get another turn!");}
+ else if(multiplayer){setHint(turn===multiplayer.mySide?"Your turn — roll the dice.":multiplayer.partner.username+"'s turn.");}
  else{setHint(turn===0?"Your turn — roll the dice.":"Nexus's turn.");}
- if(!multiplayer&&turn===1){setTimeout(()=>rollDice(null,true),620);}
+ if(!multiplayer&&playMode==="bot"&&turn===1){setTimeout(()=>rollDice(null,true),620);}
 }
 function showWinner(teamId){
  const human=teamId==="red";
@@ -758,6 +834,7 @@ async function finishGameInvite(){
  catch(err){console.warn("Could not mark game invite finished",err);}
 }
 function enterOnlineMatch(invite,partner,mySide){
+  playMode="friends";updateModeUI();
  if(multiplayer&&multiplayer.inviteId===invite.id)return;
  if(multiplayer?.channel)ludoSupabase.removeChannel(multiplayer.channel).catch(()=>{});
  multiplayer={inviteId:invite.id,mySide,partner,channel:null,started:false,finished:false};
@@ -924,20 +1001,20 @@ $("lobbyLogoutBtn").addEventListener("click",async()=>{
  if(error){lobbySetStatus("lobbyAuthStatus",error.message,"error");return;}
  ludoUser=null;ludoProfile=null;if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);renderSignedOut();lobbySetStatus("lobbyAuthStatus","You have been logged out.","ok");
 });
-const boardCard=document.querySelector("#board")?.closest(".card");
+const gameArea=$("gameArea");
 $("boardFullscreenBtn")?.addEventListener("click",async()=>{
  try{
-  if(!document.fullscreenElement){if(boardCard?.requestFullscreen)await boardCard.requestFullscreen();else toast("Fullscreen is not supported by this browser.");}
+  if(!document.fullscreenElement){if(gameArea?.requestFullscreen)await gameArea.requestFullscreen();else toast("Fullscreen is not supported by your browser.");}
   else await document.exitFullscreen();
  }catch(err){toast("Fullscreen was blocked by the browser.");}
 });
 document.addEventListener("fullscreenchange",()=>{
- const active=!!document.fullscreenElement;
+ const active=document.fullscreenElement===gameArea;
  const btn=$("boardFullscreenBtn");
  if(btn)btn.textContent=active?"⤢ EXIT FULLSCREEN":"⛶ FULLSCREEN";
- if(boardCard)boardCard.classList.toggle("board-fullscreen",active);
+ if(gameArea)gameArea.classList.toggle("game-fullscreen",active);
 });
-$("inviteForm").addEventListener("submit",sendFriendInvite);
+$("inviteForm").addEventListener("submit",sendFriendInvite);$("inviteForm").addEventListener("submit",sendFriendInvite);
 $("authForm").addEventListener("submit",onAuthFormSubmit);
 $("authCloseBtn").addEventListener("click",closeAuth);
 $("authOverlay").addEventListener("click",e=>{if(e.target===$("authOverlay"))closeAuth();});
