@@ -1344,6 +1344,8 @@ async function loadGameInvites(){
   const accepted=relevant.find(r=>r.status==="accepted");
   if(accepted){
    if(accepted.room_id){
+    // Keep the joined room ID so the HOME button can close this room in Supabase.
+    activeRoomId=accepted.room_id;
     $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("gameContent").style.display="none";
     if(roomContext?.roomId===accepted.room_id&&roomContext.roomStarted&&roomContext.roster.length>=2&&roomContext.roster.some(p=>p.id===ludoUser.id)){
      enterOnlineMatchGroup(accepted.room_id,roomContext.roster,ludoUser.id,true);
