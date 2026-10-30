@@ -665,7 +665,8 @@ async function leaveFriendRoom(){
   const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
    .select("sender_id,receiver_id,status").eq("room_id",roomId);
   if(readError)throw readError;
-  const playerCount=Math.max(2,1+(room||[]).length);
+  const activeRoomRows=(room||[]).filter(r=>r.status==="pending"||r.status==="accepted");
+  const playerCount=Math.max(2,1+new Set(activeRoomRows.map(r=>r.receiver_id)).size);
   const roomStatus=playerCount===2?"finished":"cancelled";
   const {error}=await ludoSupabase.from("ludo_game_invites")
    .update({status:roomStatus,room_started:false})
