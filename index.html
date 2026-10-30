@@ -305,6 +305,9 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
 .room-tip{margin-top:14px;padding:12px;border-radius:11px;background:#11182a;color:#aeb7d0;font-size:10px;line-height:1.6}
 @media(max-width:760px){.home-grid,.shop-grid,.friend-room-slots{grid-template-columns:1fr}.home-hero-row{align-items:flex-start}.bot-setup{margin-left:0}.emoji-toolbar{align-items:flex-start}.home-play{width:100%}.friend-room-head{flex-direction:column}}
 
+#boardCard{position:relative}
+.board-home-btn{min-height:32px;padding:0 10px;font-size:9px}
+</style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -392,7 +395,7 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
       </section>
       <div class="game-content" id="gameContent" style="display:none">
     <section class="card board-card" id="boardCard">
-      <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><div style="display:flex;align-items:center;gap:7px"><button class="fullscreen-btn" type="button" id="boardFullscreenBtn" title="Toggle fullscreen">⛶ FULLSCREEN</button><span class="board-label" id="boardPlayerCount">2 PLAYERS</span></div></div>
+      <div class="card-head"><div><div class="card-title">THE LUDO ARENA</div><div class="card-sub">Choose a glowing token after rolling the dice</div></div><div style="display:flex;align-items:center;gap:7px"><button class="home-secondary board-home-btn" type="button" id="boardHomeBtn">⌂ HOME</button><button class="fullscreen-btn" type="button" id="boardFullscreenBtn" title="Toggle fullscreen">⛶ FULLSCREEN</button><span class="board-label" id="boardPlayerCount">2 PLAYERS</span></div></div>
       <div class="board-wrap"><svg id="board" viewBox="0 0 600 600" role="img" aria-label="Interactive Ludo board"></svg></div>
       <div class="board-footer"><div class="legend"><span><i style="background:var(--red)"></i>You · Red</span><span><i style="background:var(--yellow)"></i>Nexus · Yellow</span><span><i style="background:var(--green)"></i>Green lane</span><span><i style="background:var(--blue)"></i>Blue lane</span></div><div id="hint" aria-live="polite">Your turn — roll the dice.</div></div>
 
@@ -598,6 +601,25 @@ $("botModeBtn").addEventListener("click",()=>selectPlayMode("bot"));
 $("friendModeBtn").addEventListener("click",()=>selectPlayMode("friends"));
 $("localPlayerCount").addEventListener("change",()=>{activeLocalPlayerCount=Number($("localPlayerCount").value||2);});
 $("challengeTier").addEventListener("change",()=>{robotChallenge=Number($("challengeTier").value||200);smart=robotChallenge>=1000;});
+
+function returnHomeFromMatch(){
+ const oldMatch=multiplayer;
+ if(oldMatch){
+  ignoredGameInviteIds.add(oldMatch.inviteId);
+  if(oldMatch.started)sendGameAction({kind:"leave"});
+  multiplayer=null;
+  if(oldMatch.channel&&ludoSupabase)ludoSupabase.removeChannel(oldMatch.channel).catch(err=>console.warn("Could not close Ludo room:",err));
+  if(ludoSupabase&&ludoUser){
+   let q=ludoSupabase.from("ludo_game_invites").update({status:"cancelled"});
+   q=oldMatch.isRoom?q.eq("room_id",oldMatch.inviteId):q.eq("id",oldMatch.inviteId);
+   q.eq("status","accepted").then(({error})=>{if(error)console.warn("Could not close Ludo room:",error);}).catch(err=>console.warn(err));
+  }
+ }
+ activeRoomId=null;playMode="bot";
+ $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
+ $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
+ $("winnerOverlay").classList.remove("show");updateModeUI();
+}
 function updateUI(){
  const playerHost=$("playersList");
  if(playerHost){playerHost.innerHTML=teams.map((team,index)=>{
@@ -652,7 +674,8 @@ function rankMove(team,tokenId,roll){
  const tok=team.tokens.find(t=>t.id===tokenId);const next=tok.progress===-1?0:tok.progress+roll;
  if(next===57)return 1000;
  const global=next<=51?(team.start+next)%52:null;let score=5+next*.3;
- const skill=Math.max(1,Math.min(9,Math.round(Math.log10(Math.max(200,robotChallenge)/200+1)*3)+1));
+ const rawSkill=Math.max(1,Math.min(9,Math.round(Math.log10(Math.max(200,robotChallenge)/200+1)*3)+1));
+ const skill=smart?rawSkill:Math.max(1,rawSkill-2);
  if(tok.progress===-1)score+=skill*7;
  if(global!==null){
   if(SAFE.has(global))score+=skill*5;
@@ -728,6 +751,7 @@ function newGame(){
  $("diceFace").textContent="—";$("diceFace").setAttribute("aria-label","Dice not rolled");$("winnerOverlay").classList.remove("show");
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
 }
+$("boardHomeBtn").addEventListener("click",returnHomeFromMatch);
 $("rollBtn").addEventListener("click",()=>rollDice());
 $("diceFace").addEventListener("click",()=>rollDice());
 $("diceFace").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();rollDice();}});
