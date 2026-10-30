@@ -1020,12 +1020,21 @@ async function respondToInvite(requestId,action){
   await loadLobby();
  }catch(err){lobbySetStatus("lobbyListStatus",err.message||"Could not update invitation.","error");}
 }
+function createLudoRoomId(){
+ if(window.crypto&&typeof window.crypto.randomUUID==="function")return window.crypto.randomUUID();
+ const bytes=new Uint8Array(16);
+ if(window.crypto&&typeof window.crypto.getRandomValues==="function")window.crypto.getRandomValues(bytes);
+ else for(let i=0;i<bytes.length;i++)bytes[i]=Math.floor(Math.random()*256);
+ bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;
+ const hex=Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("");
+ return hex.slice(0,8)+"-"+hex.slice(8,12)+"-"+hex.slice(12,16)+"-"+hex.slice(16,20)+"-"+hex.slice(20);
+}
 async function sendGameInvite(targetId){
  if(!ludoSupabase||!ludoUser||gameInviteBusy)return;
  if(multiplayer&&!multiplayer.finished){toast("Finish or leave your current match first.");return;}
  gameInviteBusy=true;lobbySetStatus("gameInviteStatus","Preparing your friends room…");
  try{
-  if(!activeRoomId)activeRoomId=(window.crypto?.randomUUID?crypto.randomUUID():"room-"+Date.now()+"-"+Math.random().toString(36).slice(2,9));
+  if(!activeRoomId)activeRoomId=createLudoRoomId();
   const {data:existing,error:lookupError}=await ludoSupabase.from("ludo_game_invites").select("id,status,sender_id,receiver_id").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+ludoUser.id+")").in("status",["pending","accepted"]).limit(5);
   if(lookupError)throw lookupError;
   if((existing||[]).some(r=>r.status==="accepted"))throw new Error("You already have an active Ludo room with this friend.");
