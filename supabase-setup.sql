@@ -124,6 +124,20 @@ as $$ select exists(select 1 from public.ludo_game_invites i where i.room_id=p_r
 revoke all on function public.ludo_can_view_room_invites(uuid) from public;
 grant execute on function public.ludo_can_view_room_invites(uuid) to authenticated;
 
+-- Any member of a room can close/reset that room when leaving it.
+drop policy if exists "Room members can disband room invites" on public.ludo_game_invites;
+create policy "Room members can disband room invites"
+on public.ludo_game_invites for update to authenticated
+using (
+  public.ludo_can_view_room_invites(room_id)
+  and status in ('pending','accepted')
+)
+with check (
+  public.ludo_can_view_room_invites(room_id)
+  and status in ('finished','cancelled')
+);
+
+
 drop policy if exists "Players can view their own game invites" on public.ludo_game_invites;
 create policy "Players can view their own game invites"
 on public.ludo_game_invites for select to authenticated
