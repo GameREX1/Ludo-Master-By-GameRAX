@@ -78,7 +78,7 @@ h1 .highlight{background:linear-gradient(100deg,#fff 0%,#00d9ff 60%,#83f0ff 100%
 .dice-title{font-size:14px;font-weight:900}
 .dice-round{color:#8292a3;font-size:10px}
 .dice-center{display:flex;align-items:center;gap:17px;padding:18px 0}
-.dice-face{width:82px;height:82px;border-radius:18px;background:linear-gradient(145deg,#fff,#dfe8ef);color:#111a25;display:grid;place-items:center;font-size:44px;font-weight:900;box-shadow:0 8px 24px #0006,inset 0 -3px 0 #aebcc8;flex-shrink:0;transition:transform .2s}
+.dice-face{width:82px;height:82px;border-radius:18px;background:linear-gradient(145deg,#fff,#dfe8ef);color:#111a25;display:grid;place-items:center;font-size:44px;font-weight:900;box-shadow:0 8px 24px #0006,inset 0 -3px 0 #aebcc8;flex-shrink:0;transition:transform .2s;cursor:pointer;touch-action:manipulation;user-select:none}.dice-face:focus-visible{outline:3px solid var(--cyan);outline-offset:4px}.dice-face.is-disabled{cursor:not-allowed;opacity:.76}
 .dice-face.rolling{animation:roll .45s ease-in-out}
 @keyframes roll{0%{transform:rotate(0) scale(1)}45%{transform:rotate(17deg) scale(1.08)}100%{transform:rotate(0) scale(1)}}
 .dice-instruction{font-size:12px;font-weight:800;line-height:1.5}
@@ -166,10 +166,10 @@ footer a{color:var(--cyan);font-weight:900}
 .game-invite-status{font-size:10px;line-height:1.6;color:#8e9eae;margin-top:8px;overflow-wrap:anywhere}
 .lobby-empty{color:#7b8a99;font-size:10px;line-height:1.7;padding:10px 8px;border:1px dashed #2b3744;border-radius:9px;text-align:center}
 .friend-row{display:flex;align-items:center;gap:8px;padding:9px;border:1px solid #202e3d;border-radius:10px;background:#0a1119;min-width:0}
-.friend-icon{width:30px;height:30px;display:grid;place-items:center;border-radius:9px;background:#172330;flex-shrink:0;font-size:15px}
+.friend-icon{width:30px;height:30px;display:grid;place-items:center;position:relative;border-radius:9px;background:#172330;flex-shrink:0;font-size:15px}.friend-icon.online:after,.friend-icon.offline:after{content:"";position:absolute;right:-3px;bottom:-3px;width:10px;height:10px;border:2px solid #0a1119;border-radius:50%}.friend-icon.online:after{background:#36df91;box-shadow:0 0 8px #36df91aa}.friend-icon.offline:after{background:#788493}
 .friend-details{min-width:0;flex:1}
 .friend-name{font-size:10px;font-weight:900;overflow-wrap:anywhere}
-.friend-state{color:#8393a3;font-size:9px;margin-top:4px;line-height:1.4}
+.friend-state{color:#8393a3;font-size:9px;margin-top:4px;line-height:1.4;display:flex;align-items:center;gap:5px;flex-wrap:wrap}.presence-text{display:inline-flex;align-items:center;gap:4px;font-size:8px;font-weight:900;letter-spacing:.35px}.presence-text.online{color:#54e7a7}.presence-text.offline{color:#8c99a7}.presence-dot{width:6px;height:6px;border-radius:50%;display:inline-block}.presence-text.online .presence-dot{background:#38df96;box-shadow:0 0 7px #38df96aa}.presence-text.offline .presence-dot{background:#7e8a98}.friend-detail{color:#8393a3}
 .friend-buttons{display:flex;gap:4px;flex-wrap:wrap;margin-top:7px}
 .friend-buttons button{padding:5px 7px;border-radius:6px;border:1px solid #344656;background:#13202b;color:#e1eaf1;font-size:9px;font-weight:800;cursor:pointer}
 .friend-buttons button.accept{background:#123d32;color:#6bf0bb;border-color:#24664f}
@@ -264,7 +264,7 @@ footer a{color:var(--cyan);font-weight:900}
       </section>
       <section class="card dice-card">
         <div class="dice-top"><div class="dice-title">🎲 Dice control</div><span class="dice-round" id="turn-number">TURN 01</span></div>
-        <div class="dice-center"><div class="dice-face" id="diceFace" aria-label="Dice not rolled">—</div><div><div class="dice-instruction" id="diceInstruction">Ready to roll?</div><div class="dice-help" id="diceHelp">Roll a 6 to launch a token from base. A 6 earns another turn.</div></div></div>
+        <div class="dice-center"><div class="dice-face" id="diceFace" role="button" tabindex="0" aria-label="Roll the dice" aria-disabled="false">—</div><div><div class="dice-instruction" id="diceInstruction">Ready to roll?</div><div class="dice-help" id="diceHelp">Roll a 6 to launch a token from base. A 6 earns another turn.</div></div></div>
         <button id="rollBtn" class="primary-btn">🎲 ROLL DICE</button>
         <div class="action-row"><button id="newBtn" class="secondary-btn">↻ New game</button><button id="soundBtn" class="secondary-btn">🔊 Sound: on</button></div>
         <div class="settings-row"><span>Robot difficulty</span><button class="switch on" id="difficultyBtn" aria-pressed="true">SMART</button></div>
@@ -414,12 +414,16 @@ function updateUI(){
  $("red-count").innerHTML=teams[0].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("yellow-count").innerHTML=teams[1].tokens.filter(t=>t.progress===57).length+" / 4<small>home tokens</small>";
  $("turn-number").textContent="TURN "+String(turns+1).padStart(2,"0");
- const localTurn=multiplayer?turn===multiplayer.mySide:turn===0;
- $("rollBtn").disabled=busy||gameOver||die!==null||!localTurn;
- $("rollBtn").textContent=gameOver?"MATCH COMPLETE":die!==null&&localTurn?"CHOOSE A GLOWING TOKEN":multiplayer&&!localTurn?"WAITING FOR FRIEND…":!multiplayer&&turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
+ const localTurn=multiplayer?multiplayer.started&&turn===multiplayer.mySide:turn===0;
+ const canRoll=localTurn&&!busy&&!gameOver&&die===null;
+ $("rollBtn").disabled=!canRoll;
+ $("rollBtn").textContent=gameOver?"MATCH COMPLETE":busy?"ROLLING…":die!==null&&localTurn?"CHOOSE A GLOWING TOKEN":multiplayer&&!multiplayer.started?"CONNECTING TO FRIEND…":multiplayer&&!localTurn?"WAITING FOR FRIEND…":!multiplayer&&turn===1?"NEXUS IS THINKING…":"🎲 ROLL DICE";
+ $("diceFace").classList.toggle("is-disabled",!canRoll);
+ $("diceFace").setAttribute("aria-disabled",String(!canRoll));
+ $("diceFace").setAttribute("aria-label",canRoll?"Roll the dice":busy?"Dice is rolling":gameOver?"Match finished":multiplayer&&!multiplayer.started?"Waiting for friend to connect":die!==null?"Dice shows "+die:"Wait for your turn");
  $("newBtn").disabled=busy&&!gameOver;
- $("diceInstruction").textContent=gameOver?"Match finished":localTurn?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):multiplayer?"Your friend is playing…":"Nexus is calculating…";
- $("diceHelp").textContent=die===null?"Roll a 6 to launch a token from base. A 6 earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
+ $("diceInstruction").textContent=gameOver?"Match finished":busy&&die===null?"Dice is rolling…":localTurn?(die===null?"Your turn — roll!":legal.length?"Choose your token":"No legal move"):multiplayer?"Your friend is playing…":"Nexus is calculating…";
+ $("diceHelp").textContent=busy&&die===null?"Please wait while the dice rolls.":die===null?"Click the dice or the ROLL DICE button. A 6 launches a token and earns another turn.":legal.length?"Tap one of the glowing tokens on the board to move it.":"No token can move with this roll.";
  $("difficultyBtn").textContent=smart?"SMART":"NORMAL";
  $("difficultyBtn").classList.toggle("on",smart);
  $("difficultyBtn").setAttribute("aria-pressed",String(smart));
@@ -428,9 +432,10 @@ function updateUI(){
 }
 function rollDice(forcedValue=null,fromRemote=false){
  if(busy||die!==null||gameOver)return;
+ if(multiplayer&&!multiplayer.started&&!fromRemote)return;
  if(multiplayer&&!fromRemote&&turn!==multiplayer.mySide)return;
  if(!multiplayer&&!fromRemote&&turn!==0)return;
- busy=true;
+ busy=true;updateUI();
  const face=$("diceFace");face.classList.add("rolling");beep(280,.06,"square");
  let t=0;const spin=setInterval(()=>{face.textContent=1+Math.floor(Math.random()*6);t++;if(t>=7){clearInterval(spin);die=forcedValue??(1+Math.floor(Math.random()*6));face.textContent=die;face.classList.remove("rolling");busy=false;turns++;$("diceFace").setAttribute("aria-label","Dice shows "+die);beep(390+die*55,.12);if(multiplayer&&!fromRemote)sendGameAction({kind:"roll",value:die,turn});afterRoll();}},65);
 }
@@ -529,6 +534,8 @@ function newGame(){
  addLog("🎲","Match ready. <b>Roll to start.</b>");setHint("Your turn — roll the dice.");updateUI();
 }
 $("rollBtn").addEventListener("click",()=>rollDice());
+$("diceFace").addEventListener("click",()=>rollDice());
+$("diceFace").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();rollDice();}});
 $("newBtn").addEventListener("click",()=>{if(multiplayer){multiplayer.finished=false;sendGameAction({kind:"reset"});newGame();toast("Match restarted for both players.");}else{newGame();toast("New match ready — good luck!");}});
 $("playAgainBtn").addEventListener("click",()=>{newGame();toast("New match started!");});
 $("soundBtn").addEventListener("click",()=>{soundOn=!soundOn;$("soundBtn").textContent=soundOn?"🔊 Sound: on":"🔇 Sound: off";if(soundOn)beep(520,.08);});
@@ -542,11 +549,52 @@ const LUDO_PUBLIC_URL="https://ludomaster.qd.je";
 const LUDO_SUPABASE_URL="https://pmmrwjdadzjsedshrhnq.supabase.co";
 const LUDO_SUPABASE_ANON_KEY="sb_publishable_Ud0bITW5Afyn7SfOV5Yu-w_9e4LpxhI";
 let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null,selectedProfileAvatar="🎮";
+let lobbyPresenceChannel=null,onlineUserIds=new Set(),lobbyRowsCache=null;
 const LUDO_AVATARS=["🎮","😎","🐱","🐼","🦊","🐸","🐯","🐉","👑","🚀","👾","🦄","⚽","🐺","🥷","🧙"];
 
 function lobbySetStatus(id,message,type){
  const el=$(id);if(!el)return;el.textContent=message||"";el.classList.remove("error","ok");if(type)el.classList.add(type);
 }
+function stopLobbyPresence(){
+ const channel=lobbyPresenceChannel;
+ lobbyPresenceChannel=null;onlineUserIds=new Set();lobbyRowsCache=null;
+ if(channel&&ludoSupabase)ludoSupabase.removeChannel(channel).catch(err=>console.warn("Ludo presence disconnect:",err));
+}
+async function startLobbyPresence(){
+ if(!ludoSupabase||!ludoUser)return;
+ const userId=ludoUser.id;
+ if(lobbyPresenceChannel){
+  const previous=lobbyPresenceChannel;lobbyPresenceChannel=null;
+  try{await ludoSupabase.removeChannel(previous);}catch(err){console.warn("Ludo presence cleanup:",err);}
+ }
+ if(!ludoUser||ludoUser.id!==userId)return;
+ onlineUserIds=new Set();
+ const channel=ludoSupabase.channel("ludo-global-presence",{config:{presence:{key:userId}}});
+ lobbyPresenceChannel=channel;
+ channel.on("presence",{event:"sync"},()=>{
+  if(lobbyPresenceChannel!==channel)return;
+  const state=channel.presenceState();
+  const ids=Object.values(state).flat().map(entry=>entry.user_id).filter(Boolean);
+  onlineUserIds=new Set(ids);
+  if(lobbyRowsCache)showLobbyRows(lobbyRowsCache.friends,lobbyRowsCache.incoming,lobbyRowsCache.outgoing);
+ });
+ channel.subscribe(async status=>{
+  if(lobbyPresenceChannel!==channel||ludoUser?.id!==userId)return;
+  if(status==="SUBSCRIBED"){
+   const {error}=await channel.track({user_id:userId,username:ludoProfile?.username||"Player",online_at:new Date().toISOString()});
+   if(error){
+    $("lobbyAccountTag").textContent="⚪ OFFLINE · @"+(ludoProfile?.username||"Player");
+    lobbySetStatus("lobbyAuthStatus","Signed in, but online status could not connect. Check Supabase Realtime.","error");
+   }else{
+    $("lobbyAccountTag").textContent="🟢 ONLINE · @"+(ludoProfile?.username||"Player");
+   }
+  }else if(status==="CHANNEL_ERROR"||status==="TIMED_OUT"){
+   $("lobbyAccountTag").textContent="⚪ OFFLINE · @"+(ludoProfile?.username||"Player");
+   lobbySetStatus("lobbyAuthStatus","Signed in, but live presence is unavailable. Check Supabase Realtime.","error");
+  }
+ });
+}
+
 function lobbyEscape(value){
  return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
@@ -567,6 +615,7 @@ function openAuth(mode){
 }
 function closeAuth(){$("authOverlay").classList.remove("show");}
 function renderSignedOut(){
+ stopLobbyPresence();
  $("lobbyAccountName").textContent="Guest player";
  $("lobbyAccountTag").textContent="@sign_in_to_play";
  $("lobbyAvatar").textContent="👤";
@@ -585,7 +634,7 @@ function renderSignedOut(){
 function renderSignedIn(){
  const username=ludoProfile?.username||ludoUser?.email?.split("@")[0]||"Player";
  $("lobbyAccountName").textContent=username;
- $("lobbyAccountTag").textContent="@"+username;
+ $("lobbyAccountTag").textContent="🟡 CONNECTING · @"+username;
  $("lobbyAvatar").textContent=ludoProfile?.avatar_emoji||"🎮";
  $("profileCustomizeBtn").style.display="block";
  $("lobbyGuestActions").style.display="none";
@@ -595,10 +644,13 @@ function renderSignedIn(){
  lobbySetStatus("inviteStatus","Enter someone's exact username to invite them.");
 }
 function showLobbyRows(friends,incoming,outgoing){
- const row=(username,icon,detail,buttons="")=>'<div class="friend-row"><div class="friend-icon">'+lobbyEscape(icon||"👤")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state">'+lobbyEscape(detail)+'</div>'+buttons+'</div></div>';
- $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,f.avatar_emoji||"🟢","Friend · ready to invite",'<button class="game-invite-btn" data-game-invite-friend="'+f.id+'">🎮 Invite to game</button>')).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
- $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,f.avatar_emoji||"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>')).join(""):'<div class="lobby-empty">No incoming requests.</div>';
- $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,f.avatar_emoji||"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting")).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
+ const row=(username,icon,detail,buttons="",userId="")=>{
+  const online=!!userId&&onlineUserIds.has(userId),state=online?"online":"offline";
+  return '<div class="friend-row"><div class="friend-icon '+state+'">'+lobbyEscape(icon||"👤")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(username)+'</div><div class="friend-state"><span class="presence-text '+state+'"><i class="presence-dot"></i>'+(online?"ONLINE":"OFFLINE")+'</span><span class="friend-detail">· '+lobbyEscape(detail)+'</span></div>'+buttons+'</div></div>';
+ };
+ $("friendsList").innerHTML=friends.length?friends.map(f=>row(f.username,f.avatar_emoji||"🟢","Friend · ready to invite",'<button class="game-invite-btn" data-game-invite-friend="'+f.id+'">🎮 Invite to game</button>',f.id)).join(""):'<div class="lobby-empty">No friends yet. Invite someone by username.</div>';
+ $("incomingList").innerHTML=incoming.length?incoming.map(f=>row(f.username,f.avatar_emoji||"📩","Wants to connect",'<div class="friend-buttons"><button class="accept" data-invite-action="accept" data-invite-id="'+f.id+'">Accept</button><button class="decline" data-invite-action="decline" data-invite-id="'+f.id+'">Decline</button></div>',f.profileId||f.id)).join(""):'<div class="lobby-empty">No incoming requests.</div>';
+ $("outgoingList").innerHTML=outgoing.length?outgoing.map(f=>row(f.username,f.avatar_emoji||"📨",f.status==="accepted"?"Friend · accepted":"Invite sent · waiting","",f.id)).join(""):'<div class="lobby-empty">Your sent invites will appear here.</div>';
  $("lobbyFriendCount").textContent=friends.length+" FRIEND"+(friends.length===1?"":"S");
  $("lobbyInviteCount").textContent=(incoming.length+outgoing.filter(f=>f.status==="pending").length)+" PENDING";
  document.querySelectorAll("[data-invite-action]").forEach(btn=>btn.addEventListener("click",()=>respondToInvite(Number(btn.dataset.inviteId),btn.dataset.inviteAction)));
@@ -622,6 +674,7 @@ async function loadLobby(){
    else if(r.status==="pending"&&r.receiver_id===ludoUser.id){incoming.push({...other,requestId:r.id,id:r.id,profileId:other.id});}
    else if(r.status==="pending"&&r.sender_id===ludoUser.id){outgoing.push({...other,id:other.id,inviteId:r.id,status:"pending"});}
   }
+  lobbyRowsCache={friends,incoming,outgoing};
   showLobbyRows(friends,incoming,outgoing);
   await loadGameInvites();
   lobbySetStatus("lobbyListStatus","");
@@ -710,7 +763,7 @@ function enterOnlineMatch(invite,partner,mySide){
  multiplayer={inviteId:invite.id,mySide,partner,channel:null,started:false,finished:false};
  lobbySetStatus("gameInviteStatus","Connecting to @"+partner.username+"…");
  const channel=ludoSupabase.channel("ludo-game-"+invite.id,{config:{broadcast:{self:false},presence:{key:ludoUser.id}}});
- multiplayer.channel=channel;
+ multiplayer.channel=channel;updateUI();
  channel.on("broadcast",{event:"game_action"},({payload})=>{
   if(!payload||payload.user_id===ludoUser.id||!multiplayer||multiplayer.inviteId!==invite.id)return;
   if(payload.kind==="roll"&&multiplayer.started&&turn===payload.turn&&turn!==multiplayer.mySide&&die===null)rollDice(Number(payload.value),true);
@@ -807,7 +860,7 @@ async function syncLobbyAuth(user){
    if(createError)throw createError;
    ludoProfile=created;
   }
-  renderSignedIn();await loadLobby();
+  renderSignedIn();await startLobbyPresence();await loadLobby();
   if(lobbyRefreshTimer)clearInterval(lobbyRefreshTimer);
   lobbyRefreshTimer=setInterval(()=>{if(ludoUser)loadLobby();},6000);
  }catch(err){
