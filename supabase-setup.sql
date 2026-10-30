@@ -101,6 +101,14 @@ on public.ludo_game_invites for update to authenticated
 using ((auth.uid() = sender_id or auth.uid() = receiver_id) and status = 'accepted')
 with check ((auth.uid() = sender_id or auth.uid() = receiver_id) and status in ('accepted','finished','cancelled'));
 
+-- Allow the room host to close invitations that are still pending.
+-- Accepted rows are covered by the existing "Players can finish their game invites" policy.
+drop policy if exists "Room hosts can close pending invites" on public.ludo_game_invites;
+create policy "Room hosts can close pending invites"
+on public.ludo_game_invites for update to authenticated
+using (auth.uid() = sender_id and status = 'pending')
+with check (auth.uid() = sender_id and status in ('finished','cancelled'));
+
 grant select, insert, update on public.ludo_game_invites to authenticated;
 
 
