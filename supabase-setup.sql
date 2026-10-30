@@ -107,6 +107,7 @@ grant select, insert, update on public.ludo_game_invites to authenticated;
 -- ================= LUDO V2: ROOMS, FREE COINS, COSMETICS =================
 alter table public.ludo_game_invites add column if not exists room_id uuid;
 alter table public.ludo_game_invites add column if not exists seat integer;
+alter table public.ludo_game_invites add column if not exists room_started boolean not null default false;
 create index if not exists ludo_game_invites_room_idx on public.ludo_game_invites(room_id,status,seat);
 
 create or replace function public.ludo_can_view_room_invites(p_room_id uuid)
