@@ -303,6 +303,11 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
 .seat-state{font-size:8px;letter-spacing:.5px;color:#8f9ab8;margin-top:4px}
 .room-seat.joined .seat-state{color:#6ce6ae}
 .room-tip{margin-top:14px;padding:12px;border-radius:11px;background:#11182a;color:#aeb7d0;font-size:10px;line-height:1.6}
+.friend-room-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px}
+.friend-room-actions .home-play{max-width:260px;min-width:190px}
+.friend-room-play-hint{font-size:10px;line-height:1.6;color:#b9c1dc}
+.seat-state{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.seat-color-dot{display:inline-block;width:8px;height:8px;flex:none;border-radius:50%;box-shadow:0 0 8px currentColor}
 @media(max-width:760px){.home-grid,.shop-grid,.friend-room-slots{grid-template-columns:1fr}.home-hero-row{align-items:flex-start}.bot-setup{margin-left:0}.emoji-toolbar{align-items:flex-start}.home-play{width:100%}.friend-room-head{flex-direction:column}}
 
 #boardCard{position:relative}
@@ -381,7 +386,7 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
 
       <section class="friend-room-panel" id="friendRoomPanel" style="display:none">
         <div class="friend-room-head">
-          <div><div class="home-kicker">◆ PRIVATE MATCH ROOM</div><h2>Friends Lobby</h2><p>Invite up to three friends from your sidebar. The match begins when all invited players have joined.</p></div>
+          <div><div class="home-kicker">◆ PRIVATE MATCH ROOM</div><h2>Friends Lobby</h2><p>Invite up to three friends. The host can start as soon as two players are in the room.</p></div>
           <button class="home-secondary" id="friendRoomHomeBtn" type="button">← HOME</button>
         </div>
         <div class="friend-room-meta"><span>ROOM <b id="friendRoomCode">WAITING FOR INVITES</b></span><span id="friendRoomStatus">1 / 4 PLAYERS</span></div>
@@ -391,7 +396,8 @@ body{background:radial-gradient(ellipse at 10% 0%,#30205b 0,transparent 36%),rad
           <div class="room-seat"><span class="seat-number">03</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>
           <div class="room-seat"><span class="seat-number">04</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>
         </div>
-        <div class="room-tip">💡 Your friends appear in the sidebar. Tap <b>INVITE TO GAME</b> beside each friend to fill these seats.</div>
+        <div class="friend-room-actions"><button class="home-play" id="friendRoomPlayBtn" type="button" style="display:none">▶ PLAY NOW</button><div class="friend-room-play-hint" id="friendRoomPlayHint">Invite at least one friend to unlock Play.</div></div>
+        <div class="room-tip">💡 Seat colors are shown here. The host can start with 2, 3 or 4 players; empty seats are not required.</div>
       </section>
       <div class="game-content" id="gameContent" style="display:none">
     <section class="card board-card" id="boardCard">
@@ -770,6 +776,7 @@ const LUDO_SUPABASE_ANON_KEY="sb_publishable_Ud0bITW5Afyn7SfOV5Yu-w_9e4LpxhI";
 let ludoSupabase=null,ludoUser=null,ludoProfile=null,authMode="signup",lobbyBusy=false,lobbyRefreshTimer=null,selectedProfileAvatar="🎮";
 let lobbyPresenceChannel=null,onlineUserIds=new Set(),lobbyRowsCache=null;
 const LUDO_AVATARS=["🎮","😎","🐱","🐼","🦊","🐸","🐯","🐉","👑","🚀","👾","🦄","⚽","🐺","🥷","🧙"];
+const LUDO_ROOM_COLORS=[{name:"RED",hex:"#ff657a",emoji:"🔴"},{name:"GREEN",hex:"#54d6a3",emoji:"🟢"},{name:"YELLOW",hex:"#f5cf62",emoji:"🟡"},{name:"BLUE",hex:"#63a8ff",emoji:"🔵"}];
 const LUDO_SHOP_ITEMS=[
  {key:"banner_sunset",title:"Sunset Banner",desc:"A warm sunset cover for your player card.",art:"🌇",price:350,type:"banner"},
  {key:"banner_cyber",title:"Cyber Banner",desc:"Neon blue and violet profile cover.",art:"🌌",price:550,type:"banner"},
@@ -1039,7 +1046,7 @@ async function sendGameInvite(targetId){
   if(lookupError)throw lookupError;
   if((existing||[]).some(r=>r.status==="accepted"))throw new Error("You already have an active Ludo room with this friend.");
   if((existing||[]).some(r=>r.status==="pending"))throw new Error("A Ludo invitation is already pending between you.");
-  const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("seat").eq("room_id",activeRoomId);
+  const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("seat,status").eq("room_id",activeRoomId).in("status",["pending","accepted"]);
   if(roomError)throw roomError;
   const used=new Set([0,...(roomRows||[]).map(r=>Number(r.seat)).filter(Number.isFinite)]);
   const seat=[1,2,3].find(n=>!used.has(n));if(!seat)throw new Error("This room already has four player seats.");
@@ -1118,67 +1125,142 @@ function enterOnlineMatch(invite,partner,mySide){
  ];
  enterOnlineMatchGroup(invite.id,roster,ludoUser.id,false);
 }
+async function startFriendRoomMatch(){
+ if(!ludoSupabase||!ludoUser||!activeRoomId)return;
+ const button=$("friendRoomPlayBtn");
+ if(button)button.disabled=true;
+ lobbySetStatus("gameInviteStatus","Starting your Ludo room…");
+ try{
+  const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites")
+   .select("sender_id,receiver_id,status,room_id,seat,room_started")
+   .eq("room_id",activeRoomId).order("seat",{ascending:true});
+  if(roomError)throw roomError;
+  const room=roomRows||[];
+  if(!room.length)throw new Error("This room is empty. Invite a friend first.");
+  const hostId=room[0].sender_id;
+  if(hostId!==ludoUser.id)throw new Error("Only the room host can start this match.");
+  if(room.some(r=>r.room_started))throw new Error("This room has already started.");
+  const accepted=room.filter(r=>r.status==="accepted").sort((a,b)=>Number(a.seat)-Number(b.seat));
+  if(!accepted.length)throw new Error("At least one friend must accept before you can start.");
+  const entries=[{id:hostId,seat:0},...accepted.map(r=>({id:r.receiver_id,seat:Number(r.seat)}))]
+   .sort((a,b)=>a.seat-b.seat);
+  const unique=entries.filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i);
+  if(unique.length<2||unique.length>4)throw new Error("A Ludo room needs 2–4 players.");
+  const {data:profiles,error:profileError}=await ludoSupabase.from("ludo_profiles")
+   .select("id,username,avatar_emoji").in("id",unique.map(p=>p.id));
+  if(profileError)throw profileError;
+  const people=new Map((profiles||[]).map(p=>[p.id,p]));
+  const roster=unique.map((entry,index)=>{
+   const profile=people.get(entry.id);
+   return {id:entry.id,username:profile?.username||(entry.id===ludoUser.id?"You":"Player"),avatar_emoji:profile?.avatar_emoji||"🎮",seat:index};
+  });
+  const {error:startError}=await ludoSupabase.from("ludo_game_invites")
+   .update({room_started:true}).eq("room_id",activeRoomId).eq("status","accepted");
+  if(startError)throw startError;
+  const roomId=activeRoomId;
+  lobbySetStatus("gameInviteStatus","Room started with "+roster.length+" players. Connecting everyone…","ok");
+  enterOnlineMatchGroup(roomId,roster,ludoUser.id,true);
+ }catch(err){
+  console.error("Could not start Ludo room:",err);
+  lobbySetStatus("gameInviteStatus",err.message||"Could not start this room. Check the room setup.","error");
+ }finally{
+  if(button)button.disabled=false;
+ }
+}
 async function loadGameInvites(){
  if(!ludoSupabase||!ludoUser)return;
  try{
-  const {data:rows,error}=await ludoSupabase.from("ludo_game_invites").select("id,sender_id,receiver_id,status,created_at,room_id,seat").or("sender_id.eq."+ludoUser.id+",receiver_id.eq."+ludoUser.id).order("created_at",{ascending:false}).limit(50);
+  const {data:rows,error}=await ludoSupabase.from("ludo_game_invites")
+   .select("id,sender_id,receiver_id,status,created_at,room_id,seat,room_started")
+   .or("sender_id.eq."+ludoUser.id+",receiver_id.eq."+ludoUser.id)
+   .order("created_at",{ascending:false}).limit(50);
   if(error)throw error;
   const relevant=(rows||[]).filter(r=>(r.status==="pending"||r.status==="accepted")&&!ignoredGameInviteIds.has(r.room_id||r.id));
-  const ids=[...new Set(relevant.flatMap(r=>[r.sender_id,r.receiver_id]))];let profiles=[];
-  if(ids.length){const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);if(profileError)throw profileError;profiles=data||[];}
+  const ids=[...new Set(relevant.flatMap(r=>[r.sender_id,r.receiver_id]))];
+  let profiles=[];
+  if(ids.length){
+   const {data,error:profileError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",ids);
+   if(profileError)throw profileError;
+   profiles=data||[];
+  }
   const byId=new Map(profiles.map(p=>[p.id,p]));
   const displayRoomId=activeRoomId||relevant.find(r=>r.room_id)?.room_id||null;
+  let roomContext=null;
   if(displayRoomId){
    activeRoomId=displayRoomId;
-   const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("sender_id,receiver_id,status,room_id,seat").eq("room_id",displayRoomId).order("seat",{ascending:true});
+   const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites")
+    .select("id,sender_id,receiver_id,status,room_id,seat,room_started")
+    .eq("room_id",displayRoomId).order("seat",{ascending:true});
    if(roomError)throw roomError;
-   const room=roomRows||[],hostId=room[0]?.sender_id||ludoUser.id;
-   const roomIds=[hostId,...room.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
-   const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",roomIds);
+   const room=roomRows||[];
+   const hostId=room[0]?.sender_id||ludoUser.id;
+   const activeRows=room.filter(r=>r.status==="pending"||r.status==="accepted");
+   const roomIds=[hostId,...activeRows.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
+   const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles")
+    .select("id,username,avatar_emoji").in("id",roomIds);
    if(rpError)throw rpError;
    const people=new Map((roomProfiles||[]).map(p=>[p.id,p]));
-   const seats=[{id:hostId,seat:0,status:"host"},...room.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))];
-   const occupied=new Set(seats.map(s=>s.seat));
+   const seats=[{id:hostId,seat:0,status:"host"},...activeRows.map(r=>({id:r.receiver_id,seat:Number(r.seat),status:r.status}))]
+    .sort((a,b)=>a.seat-b.seat);
+   const acceptedRows=activeRows.filter(r=>r.status==="accepted").sort((a,b)=>Number(a.seat)-Number(b.seat));
+   const roomStarted=room.some(r=>r.room_started===true);
+   const rosterEntries=[{id:hostId,seat:0},...acceptedRows.map(r=>({id:r.receiver_id,seat:Number(r.seat)}))]
+    .sort((a,b)=>a.seat-b.seat).filter((p,i,a)=>a.findIndex(x=>x.id===p.id)===i);
+   const roster=rosterEntries.map((entry,index)=>{
+    const p=people.get(entry.id);
+    return {id:entry.id,username:p?.username||(entry.id===ludoUser.id?"You":"Player"),avatar_emoji:p?.avatar_emoji||"🎮",seat:index};
+   });
    $("friendRoomCode").textContent=displayRoomId.slice(0,8).toUpperCase();
-   const joined=seats.filter(s=>s.status==="host"||s.status==="accepted").length;
-   $("friendRoomStatus").textContent=joined+" / 4 PLAYERS CONNECTED";
-   $("friendRoomSlots").innerHTML=[0,1,2,3].map(seat=>{
-    const slot=seats.find(s=>s.seat===seat),p=slot?people.get(slot.id):null;
-    const host=seat===0,isJoined=host||slot?.status==="accepted";
-    if(!slot)return '<div class="room-seat"><span class="seat-number">0'+(seat+1)+'</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state">INVITE A FRIEND</span></div>';
-    return '<div class="room-seat '+(isJoined?"joined":"")+(host?" host":"")+'"><span class="seat-number">0'+(seat+1)+'</span><span class="seat-avatar">'+lobbyEscape(p?.avatar_emoji||"🎮")+'</span><span class="seat-name">'+lobbyEscape(p?.username||"Player")+(host?" · HOST":"")+'</span><span class="seat-state">'+(host?"ROOM OWNER":isJoined?"✓ JOINED":"INVITE SENT · WAITING")+'</span></div>';
+   const joined=1+acceptedRows.length;
+   $("friendRoomStatus").textContent=joined+" / 4 PLAYERS IN ROOM";
+   $("friendRoomSlots").innerHTML=[0,1,2,3].map(index=>{
+    const slot=seats[index],p=slot?people.get(slot.id):null,color=LUDO_ROOM_COLORS[index];
+    const host=index===0,isJoined=host||slot?.status==="accepted";
+    if(!slot)return '<div class="room-seat"><span class="seat-number">0'+(index+1)+'</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state"><i class="seat-color-dot" style="background:'+color.hex+';color:'+color.hex+'"></i>'+color.name+' · OPEN</span></div>';
+    const state=host?"HOST":isJoined?"JOINED":"INVITE SENT · WAITING";
+    return '<div class="room-seat '+(isJoined?"joined":"")+(host?" host":"")+'"><span class="seat-number">0'+(index+1)+'</span><span class="seat-avatar">'+lobbyEscape(p?.avatar_emoji||"🎮")+'</span><span class="seat-name">'+lobbyEscape(p?.username||"Player")+(host?" · HOST":"")+'</span><span class="seat-state"><i class="seat-color-dot" style="background:'+color.hex+';color:'+color.hex+'"></i>'+state+' · '+color.name+'</span></div>';
    }).join("");
+   const playButton=$("friendRoomPlayBtn"),playHint=$("friendRoomPlayHint");
+   const isHost=hostId===ludoUser.id;
+   playButton.style.display=(!roomStarted&&isHost&&joined>=2)?"inline-flex":"none";
+   playButton.disabled=false;
+   if(roomStarted)playHint.textContent="This room has already started.";
+   else if(isHost&&joined>=2)playHint.textContent="Ready! Start now with "+joined+" players. Empty seats are not required.";
+   else if(isHost)playHint.textContent="Invite at least one friend. Play unlocks when 2 players are in the room.";
+   else if(joined>=2)playHint.textContent="Waiting for the room host to press Play.";
+   else playHint.textContent="Waiting for one more player to join.";
+   roomContext={roomId:displayRoomId,roomStarted,roster,hostId,joined};
   }
   const incoming=relevant.filter(r=>r.status==="pending"&&r.receiver_id===ludoUser.id);
   $("gameIncomingList").innerHTML=incoming.length?incoming.map(r=>{
    const p=byId.get(r.sender_id);if(!p)return "";
-   return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">Invites you to a Ludo room · seat '+(Number(r.seat)+1)+'</div><div class="game-request-actions"><button class="accept" data-game-response="accept" data-game-id="'+r.id+'">ACCEPT & JOIN</button><button data-game-response="decline" data-game-id="'+r.id+'">DECLINE</button></div></div></div>';
+   const alreadyStarted=!!(r.room_id&&roomContext?.roomId===r.room_id&&roomContext.roomStarted);
+   if(alreadyStarted)return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">This room has already started.</div></div></div>';
+   return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">Invites you to a Ludo room · '+(Number(r.seat)+1)+'</div><div class="game-request-actions"><button class="accept" data-game-response="accept" data-game-id="'+r.id+'">ACCEPT & JOIN</button><button data-game-response="decline" data-game-id="'+r.id+'">DECLINE</button></div></div></div>';
   }).filter(Boolean).join(""):'<div class="lobby-empty">No game invitations.</div>';
   document.querySelectorAll("[data-game-response]").forEach(btn=>btn.addEventListener("click",()=>respondToGameInvite(btn.dataset.gameId,btn.dataset.gameResponse)));
   const accepted=relevant.find(r=>r.status==="accepted");
   if(accepted){
    if(accepted.room_id){
     $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("gameContent").style.display="none";
-    const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("id,sender_id,receiver_id,status,room_id,seat").eq("room_id",accepted.room_id).order("seat",{ascending:true});
-    if(roomError)throw roomError;
-    const inviteRows=roomRows||[],pending=inviteRows.some(r=>r.status==="pending"),joined=inviteRows.filter(r=>r.status==="accepted");
-    if(!pending&&joined.length){
-     const hostId=inviteRows[0]?.sender_id;
-     const playerIds=[hostId,...joined.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
-     const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles").select("id,username,avatar_emoji").in("id",playerIds);
-     if(rpError)throw rpError;
-     const profileById=new Map((roomProfiles||[]).map(p=>[p.id,p]));
-     const roster=playerIds.map(id=>{const p=profileById.get(id);return {id,username:p?.username||"Player",avatar_emoji:p?.avatar_emoji||"🎮"};}).map((p,index)=>({...p,seat:index}));
-     if(roster.length>=2&&roster.length<=4)enterOnlineMatchGroup(accepted.room_id,roster,ludoUser.id,true);
-    }else lobbySetStatus("gameInviteStatus","Room invites are being accepted. The room starts when all invited friends join.");
+    if(roomContext?.roomId===accepted.room_id&&roomContext.roomStarted&&roomContext.roster.length>=2&&roomContext.roster.some(p=>p.id===ludoUser.id)){
+     enterOnlineMatchGroup(accepted.room_id,roomContext.roster,ludoUser.id,true);
+    }else if(roomContext?.roomId===accepted.room_id&&!roomContext.roomStarted){
+     lobbySetStatus("gameInviteStatus",roomContext.hostId===ludoUser.id
+      ?"Room ready. Press PLAY when at least one friend has joined."
+      :"You are in the room. Waiting for the host to start the match.");
+    }
    }else{
     const partner=byId.get(accepted.sender_id===ludoUser.id?accepted.receiver_id:accepted.sender_id);
     if(partner)enterOnlineMatch(accepted,partner,accepted.sender_id===ludoUser.id?0:1);
    }
   }
   const outgoing=relevant.filter(r=>r.sender_id===ludoUser.id&&r.status==="pending");
-  if(outgoing.length)lobbySetStatus("gameInviteStatus","Waiting for "+outgoing.length+" invited friend"+(outgoing.length===1?"":"s")+" to accept. All invited players must join before the room starts.");
- }catch(err){console.error("Ludo game invites:",err);lobbySetStatus("gameInviteStatus","Room invites need the updated supabase-setup.sql run in Supabase.","error");}
+  if(outgoing.length&&!roomContext?.roomStarted)lobbySetStatus("gameInviteStatus","Waiting for "+outgoing.length+" invited friend"+(outgoing.length===1?"":"s")+" to accept. You can start with the players who have already joined.");
+ }catch(err){
+  console.error("Ludo game invites:",err);
+  lobbySetStatus("gameInviteStatus",err.message||"Room invites could not be loaded. Check the updated room setup.","error");
+ }
 }
 async function onAuthFormSubmit(event){
  event.preventDefault();if(!ludoSupabase)return;
@@ -1274,6 +1356,7 @@ async function saveProfile(event){
 $("profileCustomizeBtn").addEventListener("click",openProfileEditor);
 $("homePlayBtn").addEventListener("click",()=>{$("homeDashboard").style.display="none";$("modeSelector").style.display="flex";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
 $("friendRoomHomeBtn").addEventListener("click",()=>{$("homeDashboard").style.display="grid";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="none";$("gameContent").style.display="none";});
+$("friendRoomPlayBtn").addEventListener("click",startFriendRoomMatch);
 $("homeShopBtn").addEventListener("click",openShop);$("homeProfileBtn").addEventListener("click",openProfileEditor);
 $("dailyRewardBtn").addEventListener("click",claimDailyReward);$("shopCloseBtn").addEventListener("click",closeShop);
 $("shopOverlay").addEventListener("click",e=>{if(e.target===$("shopOverlay"))closeShop();});
