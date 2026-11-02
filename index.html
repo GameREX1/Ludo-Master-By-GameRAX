@@ -689,7 +689,6 @@ async function leaveFriendRoom(){
   $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
   return;
  }
- ignoreLudoRoom(roomId);
  try{
   const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
    .select("sender_id,receiver_id,status").eq("room_id",roomId);
