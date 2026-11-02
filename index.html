@@ -485,6 +485,34 @@ let teams,turn=0,die=null,legal=[],busy=false,gameOver=false,smart=true,soundOn=
 let multiplayer=null,gameInviteBusy=false,playMode="bot";
 let activeLocalPlayerCount=2,robotChallenge=200,activeRoomId=null;
 const ignoredGameInviteIds=new Set();
+const LUDO_IGNORED_ROOMS_KEY="gamerax_ludo_ignored_rooms_v1";
+function loadIgnoredLudoRooms(){
+ try{
+  const saved=JSON.parse(localStorage.getItem(LUDO_IGNORED_ROOMS_KEY)||"[]");
+  if(Array.isArray(saved))saved.filter(id=>typeof id==="string"&&id).forEach(id=>ignoredGameInviteIds.add(id));
+ }catch(err){console.warn("Could not load ignored Ludo rooms:",err);}
+}
+function ignoreLudoRoom(roomId){
+ if(!roomId)return;
+ ignoreLudoRoom(roomId);
+ try{
+  const saved=JSON.parse(localStorage.getItem(LUDO_IGNORED_ROOMS_KEY)||"[]");
+  const ids=Array.isArray(saved)?saved.filter(id=>typeof id==="string"&&id):[];
+  if(!ids.includes(roomId))ids.push(roomId);
+  if(ids.length>100)ids.splice(0,ids.length-100);
+  localStorage.setItem(LUDO_IGNORED_ROOMS_KEY,JSON.stringify(ids));
+ }catch(err){console.warn("Could not save ignored Ludo room:",err);}
+}
+function allowLudoRoom(roomId){
+ if(!roomId)return;
+ ignoredGameInviteIds.delete(roomId);
+ try{
+  const saved=JSON.parse(localStorage.getItem(LUDO_IGNORED_ROOMS_KEY)||"[]");
+  const ids=Array.isArray(saved)?saved.filter(id=>typeof id==="string"&&id&&id!==roomId):[];
+  localStorage.setItem(LUDO_IGNORED_ROOMS_KEY,JSON.stringify(ids));
+ }catch(err){console.warn("Could not update ignored Ludo rooms:",err);}
+}
+loadIgnoredLudoRooms();
 let diceSpinTimer=null;
 const svg=$("board");
 function makeTeams(){
@@ -599,7 +627,7 @@ async function selectPlayMode(mode){
  }
  const oldMatch=multiplayer;
  if(oldMatch){
-  ignoredGameInviteIds.add(oldMatch.inviteId);
+  ignoreLudoRoom(oldMatch.inviteId);
   const leaveNotice=oldMatch.channel?oldMatch.channel.send({type:"broadcast",event:"game_action",payload:{kind:"leave",user_id:ludoUser?.id||null}}).catch(err=>console.warn("Could not notify room:",err)):Promise.resolve();
   multiplayer=null;
   if(oldMatch.channel&&ludoSupabase)leaveNotice.finally(()=>ludoSupabase.removeChannel(oldMatch.channel).catch(err=>console.warn("Could not leave room:",err)));
@@ -621,7 +649,7 @@ async function returnHomeFromMatch(){
   const roomId=oldMatch.inviteId;
   const playerCount=oldMatch.isRoom?Math.max(2,Number(oldMatch.players?.length||2)):2;
   const roomStatus=playerCount===2?"finished":"cancelled";
-  ignoredGameInviteIds.add(roomId);
+  ignoreLudoRoom(roomId);
   try{
    if(ludoSupabase&&ludoUser){
     let q=ludoSupabase.from("ludo_game_invites")
@@ -654,13 +682,14 @@ async function returnHomeFromMatch(){
 }
 async function leaveFriendRoom(){
  const roomId=activeRoomId;
+ if(roomId)ignoreLudoRoom(roomId);
  if(!roomId||!ludoSupabase||!ludoUser){
   activeRoomId=null;
   $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
   $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
   return;
  }
- ignoredGameInviteIds.add(roomId);
+ ignoreLudoRoom(roomId);
  try{
   const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
    .select("sender_id,receiver_id,status").eq("room_id",roomId);
@@ -1113,6 +1142,7 @@ async function sendGameInvite(targetId){
 }
 async function respondToGameInvite(inviteId,action){
  if(!ludoSupabase||!ludoUser)return;
+ let acceptedRoomId=null;
  lobbySetStatus("gameInviteStatus",action==="accept"?"Accepting game invite…":"Declining game invite…");
  try{
   if(action==="accept"){
@@ -1120,6 +1150,7 @@ async function respondToGameInvite(inviteId,action){
     .select("room_id").eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending").maybeSingle();
    if(inviteError)throw inviteError;
    if(invite?.room_id){
+    acceptedRoomId=invite.room_id;
     const {data:roomState,error:roomError}=await ludoSupabase.from("ludo_game_invites")
      .select("room_started").eq("room_id",invite.room_id);
     if(roomError)throw roomError;
@@ -1135,6 +1166,7 @@ async function respondToGameInvite(inviteId,action){
   const {error}=await ludoSupabase.from("ludo_game_invites")
    .update({status:action==="accept"?"accepted":"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
   if(error)throw error;
+  if(action==="accept"&&acceptedRoomId)allowLudoRoom(acceptedRoomId);
   await loadLobby();
   if(action==="accept")lobbySetStatus("gameInviteStatus","Accepted! Connecting you and your friend…","ok");
   else lobbySetStatus("gameInviteStatus","Game invitation declined.");
@@ -1170,7 +1202,7 @@ function enterOnlineMatchGroup(roomId,roster,userId,isRoom=true){
   else if(payload.kind==="reset"&&multiplayer.started){multiplayer.finished=false;newGame();}
   else if(payload.kind==="finished"&&multiplayer){multiplayer.finished=true;setHint("Match complete — start another room match when ready.");}
   else if((payload.kind==="room_closed"||payload.kind==="room_reset")&&multiplayer?.inviteId===roomId){
-   const departed=multiplayer;multiplayer=null;ignoredGameInviteIds.add(roomId);activeRoomId=null;
+   const departed=multiplayer;multiplayer=null;ignoreLudoRoom(roomId);activeRoomId=null;
    if(departed.channel&&ludoSupabase)ludoSupabase.removeChannel(departed.channel).catch(()=>{});
    $("gameContent").style.display="none";$("modeSelector").style.display="none";
    $("friendRoomPanel").style.display="none";$("homeDashboard").style.display="grid";updateModeUI();
@@ -1278,7 +1310,7 @@ async function loadGameInvites(){
    const room=roomRows||[];
    const hostId=room[0]?.sender_id||ludoUser.id;
    if(room.some(r=>r.status==="finished"||r.status==="cancelled")){
-    ignoredGameInviteIds.add(displayRoomId);
+    ignoreLudoRoom(displayRoomId);
     activeRoomId=null;
     if(multiplayer?.inviteId===displayRoomId){
      const old=multiplayer;multiplayer=null;
