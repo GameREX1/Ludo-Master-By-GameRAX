@@ -1118,6 +1118,16 @@ async function sendGameInvite(targetId){
  if(multiplayer&&!multiplayer.finished){toast("Finish or leave your current match first.");return;}
  gameInviteBusy=true;lobbySetStatus("gameInviteStatus","Preparing your friends room…");
  try{
+  if(activeRoomId){
+   const {data:priorRows,error:priorError}=await ludoSupabase.from("ludo_game_invites")
+    .select("sender_id,status,room_started").eq("room_id",activeRoomId);
+   if(priorError)throw priorError;
+   const activePriorRows=(priorRows||[]).filter(r=>r.status==="pending"||r.status==="accepted");
+   const canReuseRoom=!ignoredGameInviteIds.has(activeRoomId)&&activePriorRows.length>0
+    &&priorRows?.[0]?.sender_id===ludoUser.id
+    &&activePriorRows.every(r=>r.room_started!==true);
+   if(!canReuseRoom)activeRoomId=null;
+  }
   if(!activeRoomId)activeRoomId=createLudoRoomId();
   const {data:existing,error:lookupError}=await ludoSupabase.from("ludo_game_invites").select("id,status,sender_id,receiver_id").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+ludoUser.id+")").in("status",["pending","accepted"]).limit(5);
   if(lookupError)throw lookupError;
@@ -1294,6 +1304,7 @@ async function loadGameInvites(){
    profiles=data||[];
   }
   const byId=new Map(profiles.map(p=>[p.id,p]));
+  if(activeRoomId&&ignoredGameInviteIds.has(activeRoomId))activeRoomId=null;
   const displayRoomId=activeRoomId||relevant.find(r=>r.room_id)?.room_id||null;
   let roomContext=null;
   if(displayRoomId){
@@ -1322,8 +1333,11 @@ async function loadGameInvites(){
     const previous=latestBySeat.get(seat);
     if(!previous||Date.parse(row.created_at||0)>=Date.parse(previous.created_at||0))latestBySeat.set(seat,row);
    }
-   const seatRows=[...latestBySeat.values()].sort((a,b)=>Number(a.seat)-Number(b.seat));
-   const activeRows=seatRows.filter(r=>r.status==="pending"||r.status==="accepted");
+   // Only pending/accepted invites occupy room seats; ended players are removed.
+   const seatRows=[...latestBySeat.values()]
+    .filter(r=>r.status==="pending"||r.status==="accepted")
+    .sort((a,b)=>Number(a.seat)-Number(b.seat));
+   const activeRows=seatRows;
    const roomIds=[hostId,...seatRows.map(r=>r.receiver_id)].filter((id,i,a)=>id&&a.indexOf(id)===i);
    const {data:roomProfiles,error:rpError}=await ludoSupabase.from("ludo_profiles")
     .select("id,username,avatar_emoji").in("id",roomIds);
@@ -1367,7 +1381,8 @@ async function loadGameInvites(){
    return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">Invites you to a Ludo room · '+(Number(r.seat)+1)+'</div><div class="game-request-actions"><button class="accept" data-game-response="accept" data-game-id="'+r.id+'">ACCEPT & JOIN</button><button data-game-response="decline" data-game-id="'+r.id+'">DECLINE</button></div></div></div>';
   }).filter(Boolean).join(""):'<div class="lobby-empty">No game invitations.</div>';
   document.querySelectorAll("[data-game-response]").forEach(btn=>btn.addEventListener("click",()=>respondToGameInvite(btn.dataset.gameId,btn.dataset.gameResponse)));
-  const accepted=relevant.find(r=>r.status==="accepted");
+  const accepted=relevant.find(r=>r.status==="accepted"&&
+   (r.room_id?r.room_id===displayRoomId:!displayRoomId));
   if(accepted){
    if(accepted.room_id){
     // Keep the joined room ID so the HOME button can close this room in Supabase.
