@@ -683,12 +683,10 @@ async function returnHomeFromMatch(){
 async function leaveFriendRoom(){
  const roomId=activeRoomId;
  if(roomId)ignoreLudoRoom(roomId);
- if(!roomId||!ludoSupabase||!ludoUser){
-  activeRoomId=null;
-  $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
-  $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
-  return;
- }
+ activeRoomId=null;
+ $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
+ $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
+ if(!roomId||!ludoSupabase||!ludoUser)return;
  try{
   const {data:room,error:readError}=await ludoSupabase.from("ludo_game_invites")
    .select("sender_id,receiver_id,status").eq("room_id",roomId);
@@ -704,9 +702,6 @@ async function leaveFriendRoom(){
   console.error("Could not leave Ludo room:",err);
   lobbySetStatus("gameInviteStatus","Room departure could not be saved: "+(err.message||err),"error");
  }
- activeRoomId=null;
- $("homeDashboard").style.display="grid";$("modeSelector").style.display="none";
- $("friendRoomPanel").style.display="none";$("gameContent").style.display="none";
 }
 function updateUI(){
  const playerHost=$("playersList");
