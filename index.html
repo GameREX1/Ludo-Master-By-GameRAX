@@ -619,11 +619,17 @@ function updateModeUI(){
 async function selectPlayMode(mode){
  if(mode==="friends"){
   if(multiplayer&&!multiplayer.finished){playMode="friends";updateModeUI();updateUI();toast("You are already in a live friend room.");return;}
-  multiplayer=null;activeRoomId=null;playMode="friends";
+  multiplayer=null;activeRoomId=createLudoRoomId();playMode="friends";
   $("homeDashboard").style.display="none";$("modeSelector").style.display="none";$("friendRoomPanel").style.display="grid";$("gameContent").style.display="none";
-  updateModeUI();setHint("Invite 1–3 friends from your Friends list. The match starts when the room is ready.");
-  lobbySetStatus("gameInviteStatus","Create a room by inviting a friend. You can invite up to three friends into the same room.","ok");
-  toast(ludoUser?"Invite 1–3 friends to your Ludo room.":"Log in to invite friends.");return;
+  $("friendRoomCode").textContent=activeRoomId.slice(0,8).toUpperCase();
+  $("friendRoomStatus").textContent="1 / 4 PLAYERS IN ROOM";
+  $("friendRoomSlots").innerHTML='<div class="room-seat joined host"><span class="seat-number">01</span><span class="seat-avatar">'+lobbyEscape(ludoProfile?.avatar_emoji||"🎮")+'</span><span class="seat-name">'+lobbyEscape(ludoProfile?.username||"YOU")+' · HOST</span><span class="seat-state"><i class="seat-color-dot" style="background:#F43F5E;color:#F43F5E"></i>HOST · RED</span></div>'+[1,2,3].map(n=>'<div class="room-seat"><span class="seat-number">0'+(n+1)+'</span><span class="seat-avatar">＋</span><span class="seat-name">OPEN SEAT</span><span class="seat-state"><i class="seat-color-dot" style="background:'+LUDO_ROOM_COLORS[n].hex+';color:'+LUDO_ROOM_COLORS[n].hex+'"></i>'+LUDO_ROOM_COLORS[n].name+' · OPEN</span></div>').join("");
+  $("friendRoomPlayBtn").style.display="none";
+  $("friendRoomPlayHint").textContent="Invite at least one friend. PLAY NOW unlocks when 2 players are in the room.";
+  updateModeUI();setHint("New private room created. Invite only the friends you choose.");
+  lobbySetStatus("gameInviteStatus","New room created. Now invite the players you want to join.","ok");
+  if(ludoUser)loadGameInvites().catch(err=>lobbySetStatus("gameInviteStatus",err.message||"Could not load room details.","error"));
+  toast(ludoUser?"New friends room created. Invite 1–3 friends.":"Log in to invite friends.");return;
  }
  const oldMatch=multiplayer;
  if(oldMatch){
@@ -1129,10 +1135,10 @@ async function sendGameInvite(targetId){
    if(!canReuseRoom)activeRoomId=null;
   }
   if(!activeRoomId)activeRoomId=createLudoRoomId();
-  const {data:existing,error:lookupError}=await ludoSupabase.from("ludo_game_invites").select("id,status,sender_id,receiver_id").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+ludoUser.id+")").in("status",["pending","accepted"]).limit(5);
+  const {data:existing,error:lookupError}=await ludoSupabase.from("ludo_game_invites").select("id,status,sender_id,receiver_id,room_id").or("and(sender_id.eq."+ludoUser.id+",receiver_id.eq."+targetId+"),and(sender_id.eq."+targetId+",receiver_id.eq."+ludoUser.id+")").in("status",["pending","accepted"]).limit(20);
   if(lookupError)throw lookupError;
-  if((existing||[]).some(r=>r.status==="accepted"))throw new Error("You already have an active Ludo room with this friend.");
-  if((existing||[]).some(r=>r.status==="pending"))throw new Error("A Ludo invitation is already pending between you.");
+  if((existing||[]).some(r=>r.status==="accepted"&&r.room_id===activeRoomId))throw new Error("This friend is already in your current room.");
+  if((existing||[]).some(r=>r.status==="pending"&&r.room_id===activeRoomId))throw new Error("You have already invited this friend to the current room.");
   const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites").select("seat,status").eq("room_id",activeRoomId).in("status",["pending","accepted"]);
   if(roomError)throw roomError;
   const used=new Set([0,...(roomRows||[]).map(r=>Number(r.seat)).filter(Number.isFinite)]);
@@ -1170,7 +1176,10 @@ async function respondToGameInvite(inviteId,action){
   const {error}=await ludoSupabase.from("ludo_game_invites")
    .update({status:action==="accept"?"accepted":"declined"}).eq("id",inviteId).eq("receiver_id",ludoUser.id).eq("status","pending");
   if(error)throw error;
-  if(action==="accept"&&acceptedRoomId)allowLudoRoom(acceptedRoomId);
+  if(action==="accept"&&acceptedRoomId){
+   allowLudoRoom(acceptedRoomId);
+   activeRoomId=acceptedRoomId;
+  }
   await loadLobby();
   if(action==="accept")lobbySetStatus("gameInviteStatus","Accepted! Connecting you and your friend…","ok");
   else lobbySetStatus("gameInviteStatus","Game invitation declined.");
@@ -1305,7 +1314,7 @@ async function loadGameInvites(){
   }
   const byId=new Map(profiles.map(p=>[p.id,p]));
   if(activeRoomId&&ignoredGameInviteIds.has(activeRoomId))activeRoomId=null;
-  const displayRoomId=activeRoomId||relevant.find(r=>r.room_id)?.room_id||null;
+  const displayRoomId=activeRoomId||null;
   let roomContext=null;
   if(displayRoomId){
    const {data:roomRows,error:roomError}=await ludoSupabase.from("ludo_game_invites")
@@ -1381,8 +1390,9 @@ async function loadGameInvites(){
    return '<div class="friend-row"><div class="friend-icon">'+lobbyEscape(p.avatar_emoji||"🎮")+'</div><div class="friend-details"><div class="friend-name">@'+lobbyEscape(p.username)+'</div><div class="friend-state">Invites you to a Ludo room · '+(Number(r.seat)+1)+'</div><div class="game-request-actions"><button class="accept" data-game-response="accept" data-game-id="'+r.id+'">ACCEPT & JOIN</button><button data-game-response="decline" data-game-id="'+r.id+'">DECLINE</button></div></div></div>';
   }).filter(Boolean).join(""):'<div class="lobby-empty">No game invitations.</div>';
   document.querySelectorAll("[data-game-response]").forEach(btn=>btn.addEventListener("click",()=>respondToGameInvite(btn.dataset.gameId,btn.dataset.gameResponse)));
-  const accepted=relevant.find(r=>r.status==="accepted"&&
-   (r.room_id?r.room_id===displayRoomId:!displayRoomId));
+  const accepted=displayRoomId
+   ?relevant.find(r=>r.status==="accepted"&&r.room_id===displayRoomId)
+   :null;
   if(accepted){
    if(accepted.room_id){
     // Keep the joined room ID so the HOME button can close this room in Supabase.
