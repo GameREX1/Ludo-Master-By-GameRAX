@@ -494,7 +494,7 @@ function loadIgnoredLudoRooms(){
 }
 function ignoreLudoRoom(roomId){
  if(!roomId)return;
- ignoreLudoRoom(roomId);
+ ignoredGameInviteIds.add(roomId);
  try{
   const saved=JSON.parse(localStorage.getItem(LUDO_IGNORED_ROOMS_KEY)||"[]");
   const ids=Array.isArray(saved)?saved.filter(id=>typeof id==="string"&&id):[];
